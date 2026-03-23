@@ -29,4 +29,9 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  test: {
+    globals: true,
+    include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
+    passWithNoTests: true,
+  },
 }));
