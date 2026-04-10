@@ -23,3 +23,29 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
+# 异步运行时
+tokio = { version = "1", features = ["full"] }
+
+# 错误处理
+thiserror = "2"
+anyhow = "1"
+
+# 嵌入式数据库（SurrealKV 文件持久化 + 内存模式用于测试）
+surrealdb = { version = "3", features = ["kv-mem", "kv-surrealkv"] }
+
+# HTTP 客户端（LLM 网关流式调用）
+reqwest = { version = "0.12", features = ["stream", "json"] }
+
+# 可观测性
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# IPC 类型导出（Rust → TypeScript）
+specta = { version = "=2.0.0-rc.24", features = ["derive"] }
+tauri-specta = { version = "=2.0.0-rc.24", features = ["typescript"] }
+specta-typescript = "0.0.11"
+
+# 工具库
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+futures = "0.3"
