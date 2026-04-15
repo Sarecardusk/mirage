@@ -12,7 +12,7 @@ const router = createRouter({
       component: ThemeCardListView,
     },
     {
-      path: "/chat/:themeCardId",
+      path: "/chat/:themeCardId/:sessionId?",
       name: "chat",
       component: ChatView,
       props: true,

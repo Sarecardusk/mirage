@@ -6,14 +6,6 @@ use tauri::ipc::Channel;
 use crate::domain::llm::{LlmConfig, LlmStreamEvent};
 use crate::domain::session::Message;
 
-fn role_name(role: &crate::domain::session::ChatRole) -> &'static str {
-    match role {
-        crate::domain::session::ChatRole::User => "user",
-        crate::domain::session::ChatRole::Assistant => "assistant",
-        crate::domain::session::ChatRole::System => "system",
-    }
-}
-
 fn completion_url(endpoint: &str) -> String {
     if endpoint.ends_with("/chat/completions") {
         endpoint.to_string()
@@ -36,7 +28,7 @@ pub async fn stream_chat_completion(
     })];
     for message in history {
         request_messages.push(json!({
-            "role": role_name(&message.role),
+            "role": message.role.as_str(),
             "content": message.content,
         }));
     }

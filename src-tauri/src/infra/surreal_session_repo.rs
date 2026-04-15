@@ -7,26 +7,6 @@ use crate::domain::error::DomainError;
 use crate::domain::session::{ChatRole, Message, Session, SessionRepository};
 use crate::infra::database::Database;
 
-// ChatRole 与字符串互转
-
-fn role_to_str(role: &ChatRole) -> &'static str {
-    match role {
-        ChatRole::User => "user",
-        ChatRole::Assistant => "assistant",
-        ChatRole::System => "system",
-    }
-}
-
-fn str_to_role(s: &str) -> ChatRole {
-    match s {
-        "assistant" => ChatRole::Assistant,
-        "system" => ChatRole::System,
-        _ => ChatRole::User,
-    }
-}
-
-// 存储实现
-
 pub struct SurrealSessionRepo {
     db: Arc<Database>,
 }
@@ -49,6 +29,8 @@ impl SessionRepository for SurrealSessionRepo {
                 "theme_card_id": theme_card_id,
                 "created_at": &now,
                 "updated_at": &now,
+                // 新建即视为"打开过"，直接记录当前时间
+                "last_opened_at": &now,
             }))
             .await
             .map_err(|e| DomainError::StorageFailed {
@@ -62,15 +44,65 @@ impl SessionRepository for SurrealSessionRepo {
             id,
             theme_card_id: theme_card_id.to_string(),
             created_at: now.clone(),
-            updated_at: now,
+            updated_at: now.clone(),
+            last_opened_at: Some(now),
         })
+    }
+
+    async fn touch_session(&self, session_id: &str) -> Result<(), DomainError> {
+        if self.get_session(session_id).await?.is_none() {
+            return Err(DomainError::SessionNotFound {
+                id: session_id.to_string(),
+            });
+        }
+
+        self.db
+            .inner()
+            .query("UPDATE type::record('session', $sid) SET last_opened_at = $now")
+            .bind(("sid", session_id.to_string()))
+            .bind(("now", Utc::now().to_rfc3339()))
+            .await
+            .map_err(|e| DomainError::StorageFailed {
+                message: e.to_string(),
+            })?;
+
+        Ok(())
+    }
+
+    async fn delete_session(&self, session_id: &str) -> Result<(), DomainError> {
+        if self.get_session(session_id).await?.is_none() {
+            return Err(DomainError::SessionNotFound {
+                id: session_id.to_string(),
+            });
+        }
+
+        // 先删所有消息，再删 session 本身
+        self.db
+            .inner()
+            .query("DELETE message WHERE session_id = $sid")
+            .bind(("sid", session_id.to_string()))
+            .await
+            .map_err(|e| DomainError::StorageFailed {
+                message: e.to_string(),
+            })?;
+
+        self.db
+            .inner()
+            .query("DELETE type::record('session', $sid)")
+            .bind(("sid", session_id.to_string()))
+            .await
+            .map_err(|e| DomainError::StorageFailed {
+                message: e.to_string(),
+            })?;
+
+        Ok(())
     }
 
     async fn get_session(&self, session_id: &str) -> Result<Option<Session>, DomainError> {
         let rows: Vec<serde_json::Value> = self
             .db
             .inner()
-            .query("SELECT record::id(id) AS id, theme_card_id, created_at, updated_at FROM type::record('session', $id)")
+            .query("SELECT record::id(id) AS id, theme_card_id, created_at, updated_at, last_opened_at FROM type::record('session', $id)")
             .bind(("id", session_id.to_string()))
             .await
             .map_err(|e| DomainError::StorageFailed {
@@ -85,6 +117,27 @@ impl SessionRepository for SurrealSessionRepo {
             Some(row) => json_to_session(row).map(Some),
             None => Ok(None),
         }
+    }
+
+    async fn list_by_theme_card(&self, theme_card_id: &str) -> Result<Vec<Session>, DomainError> {
+        let rows: Vec<serde_json::Value> = self
+            .db
+            .inner()
+            // last_opened_at DESC 优先；从未打开的（NULL）排在最后，再按 created_at 兜底
+            .query("SELECT record::id(id) AS id, theme_card_id, created_at, updated_at, last_opened_at FROM session WHERE theme_card_id = $tcid ORDER BY last_opened_at DESC, created_at DESC")
+            .bind(("tcid", theme_card_id.to_string()))
+            .await
+            .map_err(|e| DomainError::StorageFailed {
+                message: e.to_string(),
+            })?
+            .take(0)
+            .map_err(|e| DomainError::StorageFailed {
+                message: e.to_string(),
+            })?;
+
+        rows.into_iter()
+            .map(json_to_session)
+            .collect::<Result<Vec<_>, _>>()
     }
 
     async fn list_messages(&self, session_id: &str) -> Result<Vec<Message>, DomainError> {
@@ -145,7 +198,7 @@ impl SessionRepository for SurrealSessionRepo {
             .create::<Option<serde_json::Value>>(("message", msg_id.as_str()))
             .content(serde_json::json!({
                 "session_id": session_id.to_string(),
-                "role": role_to_str(&role),
+                "role": role.as_str(),
                 "content": content.clone(),
                 "created_at": now.clone(),
             }))
@@ -187,6 +240,8 @@ fn json_to_session(val: serde_json::Value) -> Result<Session, DomainError> {
             .as_str()
             .ok_or_else(|| missing("updated_at"))?
             .to_string(),
+        // 旧记录该字段为 null，用 Option 兼容
+        last_opened_at: val["last_opened_at"].as_str().map(|s| s.to_string()),
     })
 }
 
@@ -199,7 +254,7 @@ fn json_to_message(val: serde_json::Value) -> Result<Message, DomainError> {
 
     Ok(Message {
         id: val["id"].as_str().ok_or_else(|| missing("id"))?.to_string(),
-        role: str_to_role(role_str),
+        role: ChatRole::from_storage(role_str),
         content: val["content"]
             .as_str()
             .ok_or_else(|| missing("content"))?
@@ -263,6 +318,65 @@ mod tests {
     async fn list_messages_fails_for_unknown_session() {
         let repo = make_repo().await;
         let result = repo.list_messages("no-such-session").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn list_by_theme_card_returns_only_matching_sessions() {
+        let repo = make_repo().await;
+        let s1 = repo.create_session("card-a").await.unwrap();
+        let s2 = repo.create_session("card-a").await.unwrap();
+        repo.create_session("card-b").await.unwrap();
+
+        let sessions = repo.list_by_theme_card("card-a").await.unwrap();
+        assert_eq!(sessions.len(), 2);
+
+        let ids: Vec<&str> = sessions.iter().map(|s| s.id.as_str()).collect();
+        assert!(ids.contains(&s1.id.as_str()));
+        assert!(ids.contains(&s2.id.as_str()));
+    }
+
+    #[tokio::test]
+    async fn list_by_theme_card_returns_empty_for_no_sessions() {
+        let repo = make_repo().await;
+        let sessions = repo.list_by_theme_card("card-nonexistent").await.unwrap();
+        assert!(sessions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn touch_session_updates_last_opened_at() {
+        let repo = make_repo().await;
+        let session = repo.create_session("card-1").await.unwrap();
+        let original = session.last_opened_at.clone().unwrap();
+
+        // 稍等一下确保时间戳不同
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        repo.touch_session(&session.id).await.unwrap();
+
+        let updated = repo.get_session(&session.id).await.unwrap().unwrap();
+        assert!(updated.last_opened_at.as_deref().unwrap() > original.as_str());
+    }
+
+    #[tokio::test]
+    async fn delete_session_removes_session_and_messages() {
+        let repo = make_repo().await;
+        let session = repo.create_session("card-1").await.unwrap();
+        repo.append_message(&session.id, ChatRole::User, "Hello".to_string())
+            .await
+            .unwrap();
+
+        repo.delete_session(&session.id).await.unwrap();
+
+        assert!(repo.get_session(&session.id).await.unwrap().is_none());
+        // 消息也应一并删除（查询已删 session 会报 SessionNotFound）
+        let result = repo.list_messages(&session.id).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn delete_session_fails_for_unknown_session() {
+        let repo = make_repo().await;
+        let result = repo.delete_session("no-such-id").await;
         assert!(result.is_err());
     }
 }

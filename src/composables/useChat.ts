@@ -1,9 +1,11 @@
 import { computed, ref } from "vue";
 import { useLlmStream } from "@/composables/useLlmStream";
-import { appendMessage, createSession, listMessages } from "@/services/session";
+import { appendMessage, createSession, listMessages, touchSession } from "@/services/session";
 import type { Message, Session } from "@/types/bindings";
 
-export function useChat(themeCardId: () => string) {
+// themeCardId: 当前所在卡片（响应式 getter）
+// initialSessionId: 可选，从路由参数传入的已有 session id
+export function useChat(themeCardId: () => string, initialSessionId?: () => string | undefined) {
   const session = ref<Session | null>(null);
   const messages = ref<Message[]>([]);
   const loading = ref(false);
@@ -13,26 +15,54 @@ export function useChat(themeCardId: () => string) {
   const llmStream = useLlmStream();
   const sessionId = computed(() => session.value?.id ?? "");
 
-  async function ensureSession(): Promise<Session> {
-    if (session.value) {
-      return session.value;
-    }
-
-    const created = await createSession({
-      themeCardId: themeCardId(),
-    });
-    session.value = created;
-    return created;
-  }
-
-  async function loadConversation() {
+  // 加载指定 session 的消息，不传 sid 时创建新 session
+  async function loadConversation(targetSessionId?: string) {
     loading.value = true;
     error.value = "";
     try {
-      const currentSession = await ensureSession();
-      messages.value = await listMessages(currentSession.id);
+      const sid = targetSessionId ?? initialSessionId?.();
+      if (sid) {
+        // 直接加载已有 session 的消息，session 对象从 id 构造即可（其他字段仅用于展示）
+        session.value = {
+          id: sid,
+          themeCardId: themeCardId(),
+          createdAt: "",
+          updatedAt: "",
+          lastOpenedAt: null,
+        };
+        messages.value = await listMessages(sid);
+        // 记录本次打开时间，用于下次自动跳转到"最近打开"
+        await touchSession(sid);
+      } else {
+        // 未指定 session，创建新会话
+        const created = await createSession({ themeCardId: themeCardId() });
+        session.value = created;
+        messages.value = [];
+      }
     } catch (loadError) {
       error.value = loadError instanceof Error ? loadError.message : String(loadError);
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  // 切换到另一个已有 session
+  async function switchSession(newSessionId: string) {
+    llmStream.clear();
+    await loadConversation(newSessionId);
+  }
+
+  // 创建全新 session 并切换过去
+  async function startNewSession() {
+    llmStream.clear();
+    loading.value = true;
+    error.value = "";
+    try {
+      const created = await createSession({ themeCardId: themeCardId() });
+      session.value = created;
+      messages.value = [];
+    } catch (createError) {
+      error.value = createError instanceof Error ? createError.message : String(createError);
     } finally {
       loading.value = false;
     }
@@ -48,15 +78,21 @@ export function useChat(themeCardId: () => string) {
     llmStream.clear();
 
     try {
-      const currentSession = await ensureSession();
+      // 没有当前 session 时先创建一个（兜底）
+      if (!session.value) {
+        const created = await createSession({ themeCardId: themeCardId() });
+        session.value = created;
+        messages.value = [];
+      }
+
       const userMessage = await appendMessage({
-        sessionId: currentSession.id,
+        sessionId: session.value.id,
         role: "user",
         content: content.trim(),
       });
       messages.value.push(userMessage);
 
-      await llmStream.generate(currentSession.id, themeCardId(), {
+      await llmStream.generate(session.value.id, themeCardId(), {
         onCompletion: (fullText) => {
           messages.value.push({
             id: `stream-${Date.now()}`,
@@ -82,5 +118,7 @@ export function useChat(themeCardId: () => string) {
     sendUserMessage,
     sending,
     sessionId,
+    startNewSession,
+    switchSession,
   };
 }

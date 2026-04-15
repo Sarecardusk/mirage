@@ -21,15 +21,7 @@ impl Default for LlmConfig {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct SetLlmConfigInput {
-    pub endpoint: String,
-    pub api_key: String,
-    pub model: String,
-}
-
-impl SetLlmConfigInput {
+impl LlmConfig {
     pub fn validate(&self) -> Result<(), DomainError> {
         if self.endpoint.trim().is_empty() {
             return Err(DomainError::ValidationFailed {
@@ -52,11 +44,11 @@ impl SetLlmConfigInput {
 
 #[cfg(test)]
 mod tests {
-    use super::SetLlmConfigInput;
+    use super::LlmConfig;
     use crate::domain::error::DomainError;
 
-    fn valid_input() -> SetLlmConfigInput {
-        SetLlmConfigInput {
+    fn valid_config() -> LlmConfig {
+        LlmConfig {
             endpoint: "https://api.openai.com/v1".to_string(),
             api_key: "sk-test".to_string(),
             model: "gpt-4o-mini".to_string(),
@@ -64,34 +56,34 @@ mod tests {
     }
 
     #[test]
-    fn validates_valid_input() {
-        assert!(valid_input().validate().is_ok());
+    fn validates_valid_config() {
+        assert!(valid_config().validate().is_ok());
     }
 
     #[test]
     fn rejects_empty_endpoint() {
-        let mut input = valid_input();
-        input.endpoint = "  ".to_string();
+        let mut config = valid_config();
+        config.endpoint = "  ".to_string();
         assert!(
-            matches!(input.validate(), Err(DomainError::ValidationFailed { field }) if field == "endpoint")
+            matches!(config.validate(), Err(DomainError::ValidationFailed { field }) if field == "endpoint")
         );
     }
 
     #[test]
     fn rejects_empty_api_key() {
-        let mut input = valid_input();
-        input.api_key = "".to_string();
+        let mut config = valid_config();
+        config.api_key = "".to_string();
         assert!(
-            matches!(input.validate(), Err(DomainError::ValidationFailed { field }) if field == "apiKey")
+            matches!(config.validate(), Err(DomainError::ValidationFailed { field }) if field == "apiKey")
         );
     }
 
     #[test]
     fn rejects_empty_model() {
-        let mut input = valid_input();
-        input.model = "   ".to_string();
+        let mut config = valid_config();
+        config.model = "   ".to_string();
         assert!(
-            matches!(input.validate(), Err(DomainError::ValidationFailed { field }) if field == "model")
+            matches!(config.validate(), Err(DomainError::ValidationFailed { field }) if field == "model")
         );
     }
 }
@@ -102,9 +94,11 @@ pub enum LlmStreamEvent {
     TokenChunk {
         text: String,
     },
+    #[serde(rename_all = "camelCase")]
     Completion {
         full_text: String,
     },
+    #[serde(rename_all = "camelCase")]
     Error {
         error_code: String,
         message: String,

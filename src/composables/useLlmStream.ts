@@ -26,7 +26,7 @@ export function useLlmStream() {
     }
 
     if (event.type === "completion") {
-      callbacks?.onCompletion?.(event.full_text);
+      callbacks?.onCompletion?.(event.fullText);
       streamingText.value = "";
       isStreaming.value = false;
       return;

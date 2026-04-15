@@ -4,7 +4,7 @@ use tauri::State;
 
 use crate::command::error::IpcError;
 use crate::command::state::AppState;
-use crate::domain::llm::{LlmConfig, SetLlmConfigInput};
+use crate::domain::llm::LlmConfig;
 
 #[tauri::command]
 #[specta::specta]
@@ -23,7 +23,7 @@ pub async fn get_llm_config(state: State<'_, AppState>) -> Result<LlmConfig, Ipc
 #[specta::specta]
 pub async fn set_llm_config(
     state: State<'_, AppState>,
-    input: SetLlmConfigInput,
+    input: LlmConfig,
 ) -> Result<LlmConfig, IpcError> {
     if !state.ready.load(Ordering::Acquire) {
         return Err(IpcError::app_not_ready());

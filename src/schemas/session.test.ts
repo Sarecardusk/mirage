@@ -3,6 +3,7 @@ import {
   AppendMessageInputSchema,
   CreateSessionInputSchema,
   MessageSchema,
+  SessionListSchema,
   SessionSchema,
 } from "@/schemas/session";
 
@@ -11,6 +12,7 @@ const validSession = {
   themeCardId: "card-1",
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
+  lastOpenedAt: "2026-01-02T00:00:00Z",
 };
 
 const validMessage = {
@@ -20,15 +22,35 @@ const validMessage = {
   createdAt: "2026-01-01T00:00:00Z",
 };
 
+describe("SessionListSchema", () => {
+  it("parses an array of sessions", () => {
+    const parsed = SessionListSchema.parse([validSession, { ...validSession, id: "session-2" }]);
+    expect(parsed).toHaveLength(2);
+  });
+
+  it("parses an empty array", () => {
+    expect(SessionListSchema.parse([])).toEqual([]);
+  });
+
+  it("rejects non-array input", () => {
+    expect(() => SessionListSchema.parse(validSession)).toThrow();
+  });
+});
+
 describe("SessionSchema", () => {
   it("parses a valid session", () => {
     const parsed = SessionSchema.parse(validSession);
     expect(parsed.id).toBe("session-1");
   });
 
+  it("accepts null lastOpenedAt for legacy sessions", () => {
+    const parsed = SessionSchema.parse({ ...validSession, lastOpenedAt: null });
+    expect(parsed.lastOpenedAt).toBeNull();
+  });
+
   it("rejects missing themeCardId", () => {
-    const { id, createdAt, updatedAt } = validSession;
-    expect(() => SessionSchema.parse({ id, createdAt, updatedAt })).toThrow();
+    const { id, createdAt, updatedAt, lastOpenedAt } = validSession;
+    expect(() => SessionSchema.parse({ id, createdAt, updatedAt, lastOpenedAt })).toThrow();
   });
 });
 

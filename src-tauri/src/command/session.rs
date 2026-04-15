@@ -12,6 +12,69 @@ use crate::domain::theme_card::ThemeCardRepository;
 
 #[tauri::command]
 #[specta::specta]
+pub async fn touch_session(state: State<'_, AppState>, session_id: String) -> Result<(), IpcError> {
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
+    if session_id.trim().is_empty() {
+        return Err(IpcError::from(DomainError::ValidationFailed {
+            field: "sessionId".to_string(),
+        }));
+    }
+
+    state
+        .session_repo
+        .touch_session(session_id.as_str())
+        .await
+        .map_err(IpcError::from)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_session(
+    state: State<'_, AppState>,
+    session_id: String,
+) -> Result<(), IpcError> {
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
+    if session_id.trim().is_empty() {
+        return Err(IpcError::from(DomainError::ValidationFailed {
+            field: "sessionId".to_string(),
+        }));
+    }
+
+    state
+        .session_repo
+        .delete_session(session_id.as_str())
+        .await
+        .map_err(IpcError::from)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn list_sessions(
+    state: State<'_, AppState>,
+    theme_card_id: String,
+) -> Result<Vec<Session>, IpcError> {
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
+    if theme_card_id.trim().is_empty() {
+        return Err(IpcError::from(DomainError::ValidationFailed {
+            field: "themeCardId".to_string(),
+        }));
+    }
+
+    state
+        .session_repo
+        .list_by_theme_card(theme_card_id.as_str())
+        .await
+        .map_err(IpcError::from)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn create_session(
     state: State<'_, AppState>,
     input: CreateSessionInput,

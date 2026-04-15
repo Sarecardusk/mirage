@@ -14,6 +14,7 @@ export const SessionSchema = z.object({
   themeCardId: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  lastOpenedAt: z.string().nullable(),
 }) satisfies z.ZodType<Session>;
 
 export const MessageSchema = z.object({
@@ -22,6 +23,8 @@ export const MessageSchema = z.object({
   content: z.string(),
   createdAt: z.string(),
 }) satisfies z.ZodType<Message>;
+
+export const SessionListSchema = z.array(SessionSchema);
 
 export const MessageListSchema = z.array(MessageSchema);
 

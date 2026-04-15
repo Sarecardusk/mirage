@@ -8,12 +8,12 @@ export const TokenChunkEventSchema = z.object({
 
 export const CompletionEventSchema = z.object({
   type: z.literal("completion"),
-  full_text: z.string(),
+  fullText: z.string(),
 });
 
 export const ErrorEventSchema = z.object({
   type: z.literal("error"),
-  error_code: z.string(),
+  errorCode: z.string(),
   message: z.string(),
   retryable: z.boolean(),
 });

@@ -1,20 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { LlmConfigSchema, SetLlmConfigInputSchema } from "@/schemas/config";
-
-const testEndPoint = process.env.MIRAGE_COMPLETION_ENDPOINT?.trim() || "https://api.openai.com/v1";
-const testApiKey = process.env.MIRAGE_COMPLETION_API_KEY?.trim() || "sk-test-key";
-const testModel = process.env.MIRAGE_COMPLETION_MODEL?.trim() || "gpt-4o-mini";
+import { LlmConfigSchema } from "@/schemas/config";
 
 const validConfig = {
-  endpoint: testEndPoint,
-  apiKey: testApiKey,
-  model: testModel,
+  endpoint: "https://api.openai.com/v1",
+  apiKey: "sk-test-key",
+  model: "gpt-4o-mini",
 };
 
 describe("LlmConfigSchema", () => {
   it("parses valid config", () => {
     const parsed = LlmConfigSchema.parse(validConfig);
-    expect(parsed.model).toBe(testModel);
+    expect(parsed.model).toBe("gpt-4o-mini");
   });
 
   it("rejects empty endpoint", () => {
@@ -34,28 +30,16 @@ describe("LlmConfigSchema", () => {
   });
 });
 
-describe("SetLlmConfigInputSchema", () => {
-  it("shares validation with LlmConfigSchema", () => {
-    const parsed = SetLlmConfigInputSchema.parse(validConfig);
-    expect(parsed.endpoint).toBe(validConfig.endpoint);
-  });
+const hasLlmEnvVars =
+  !!process.env.MIRAGE_COMPLETION_ENDPOINT?.trim() &&
+  !!process.env.MIRAGE_COMPLETION_API_KEY?.trim() &&
+  !!process.env.MIRAGE_COMPLETION_MODEL?.trim();
 
-  it("rejects empty fields", () => {
-    expect(() => SetLlmConfigInputSchema.parse({ ...validConfig, model: "" })).toThrow();
-  });
-});
-
-describe("对话补全在线测试", () => {
+describe.skipIf(!hasLlmEnvVars)("对话补全在线测试", () => {
   it("apiKey 有效时可完成最小 chat 请求", async () => {
-    const endpoint = process.env.MIRAGE_COMPLETION_ENDPOINT?.trim();
-    const apiKey = process.env.MIRAGE_COMPLETION_API_KEY?.trim();
-    const model = process.env.MIRAGE_COMPLETION_MODEL?.trim();
-    if (!endpoint || !apiKey || !model) {
-      throw new Error(
-        "需配置 MIRAGE_COMPLETION_ENDPOINT、MIRAGE_COMPLETION_API_KEY、MIRAGE_COMPLETION_MODEL" +
-          "（见 .env.test.example ）",
-      );
-    }
+    const endpoint = process.env.MIRAGE_COMPLETION_ENDPOINT!.trim();
+    const apiKey = process.env.MIRAGE_COMPLETION_API_KEY!.trim();
+    const model = process.env.MIRAGE_COMPLETION_MODEL!.trim();
 
     const base = endpoint.replace(/\/$/, "");
     const url = `${base}/chat/completions`;

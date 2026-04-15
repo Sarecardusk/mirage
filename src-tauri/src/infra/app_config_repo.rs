@@ -32,11 +32,26 @@ impl AppConfigRepo {
                 message: e.to_string(),
             })?;
 
-        Ok(rows
-            .into_iter()
-            .next()
-            .map(json_to_config)
-            .unwrap_or_default())
+        match rows.into_iter().next() {
+            Some(val) => {
+                let defaults = LlmConfig::default();
+                Ok(LlmConfig {
+                    endpoint: val["endpoint"]
+                        .as_str()
+                        .map(str::to_string)
+                        .unwrap_or(defaults.endpoint),
+                    api_key: val["api_key"]
+                        .as_str()
+                        .map(str::to_string)
+                        .unwrap_or(defaults.api_key),
+                    model: val["model"]
+                        .as_str()
+                        .map(str::to_string)
+                        .unwrap_or(defaults.model),
+                })
+            }
+            None => Ok(LlmConfig::default()),
+        }
     }
 
     /// 写入新的 `LlmConfig`，直接覆盖旧值。
@@ -89,24 +104,6 @@ impl AppConfigRepo {
         }
 
         Ok(())
-    }
-}
-
-fn json_to_config(val: serde_json::Value) -> LlmConfig {
-    let defaults = LlmConfig::default();
-    LlmConfig {
-        endpoint: val["endpoint"]
-            .as_str()
-            .map(str::to_string)
-            .unwrap_or(defaults.endpoint),
-        api_key: val["api_key"]
-            .as_str()
-            .map(str::to_string)
-            .unwrap_or(defaults.api_key),
-        model: val["model"]
-            .as_str()
-            .map(str::to_string)
-            .unwrap_or(defaults.model),
     }
 }
 

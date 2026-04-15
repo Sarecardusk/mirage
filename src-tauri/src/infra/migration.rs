@@ -7,10 +7,11 @@ struct Migration {
     sql: &'static str,
 }
 
-const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    name: "initial_schema",
-    sql: "
+const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        name: "initial_schema",
+        sql: "
         DEFINE TABLE theme_card SCHEMAFULL;
         DEFINE FIELD schema_version ON theme_card TYPE int;
         DEFINE FIELD name            ON theme_card TYPE string;
@@ -40,7 +41,14 @@ const MIGRATIONS: &[Migration] = &[Migration {
         DEFINE FIELD name       ON _migration TYPE string;
         DEFINE FIELD applied_at ON _migration TYPE string;
     ",
-}];
+    },
+    Migration {
+        version: 2,
+        name: "session_last_opened_at",
+        // option<string> 允许空值，兼容 v1 存量 session 记录（旧记录该字段返回 None）
+        sql: "DEFINE FIELD last_opened_at ON session TYPE option<string>;",
+    },
+];
 
 // ── 对外执行入口 ───────────────────────────────────────────────────────────────
 

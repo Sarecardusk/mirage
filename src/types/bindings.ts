@@ -5,11 +5,14 @@ import { invoke as __TAURI_INVOKE, Channel } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	getLlmConfig: () => typedError<LlmConfig, IpcError>(__TAURI_INVOKE("get_llm_config")),
-	setLlmConfig: (input: SetLlmConfigInput) => typedError<LlmConfig, IpcError>(__TAURI_INVOKE("set_llm_config", { input })),
+	setLlmConfig: (input: LlmConfig) => typedError<LlmConfig, IpcError>(__TAURI_INVOKE("set_llm_config", { input })),
 	invokeLlmGeneration: (sessionId: string, themeCardId: string, channel: Channel<LlmStreamEvent>) => typedError<null, IpcError>(__TAURI_INVOKE("invoke_llm_generation", { sessionId, themeCardId, channel })),
 	appendMessage: (input: AppendMessageInput) => typedError<Message, IpcError>(__TAURI_INVOKE("append_message", { input })),
 	createSession: (input: CreateSessionInput) => typedError<Session, IpcError>(__TAURI_INVOKE("create_session", { input })),
+	deleteSession: (sessionId: string) => typedError<null, IpcError>(__TAURI_INVOKE("delete_session", { sessionId })),
 	listMessages: (sessionId: string) => typedError<Message[], IpcError>(__TAURI_INVOKE("list_messages", { sessionId })),
+	listSessions: (themeCardId: string) => typedError<Session[], IpcError>(__TAURI_INVOKE("list_sessions", { themeCardId })),
+	touchSession: (sessionId: string) => typedError<null, IpcError>(__TAURI_INVOKE("touch_session", { sessionId })),
 	createThemeCard: (input: CreateThemeCardInput) => typedError<ThemeCard, IpcError>(__TAURI_INVOKE("create_theme_card", { input })),
 	getThemeCard: (themeCardId: string) => typedError<ThemeCard, IpcError>(__TAURI_INVOKE("get_theme_card", { themeCardId })),
 	listThemeCards: () => typedError<ThemeCard[], IpcError>(__TAURI_INVOKE("list_theme_cards")),
@@ -48,7 +51,7 @@ export type LlmConfig = {
 	model: string,
 };
 
-export type LlmStreamEvent = { type: "tokenChunk"; text: string } | { type: "completion"; full_text: string } | { type: "error"; error_code: string; message: string; retryable: boolean };
+export type LlmStreamEvent = { type: "tokenChunk"; text: string } | { type: "completion"; fullText: string } | { type: "error"; errorCode: string; message: string; retryable: boolean };
 
 export type Message = {
 	id: string,
@@ -62,12 +65,11 @@ export type Session = {
 	themeCardId: string,
 	createdAt: string,
 	updatedAt: string,
-};
-
-export type SetLlmConfigInput = {
-	endpoint: string,
-	apiKey: string,
-	model: string,
+	/**
+	 *  最近一次被用户打开/查看的时间；None 表示从未被主动打开过（旧数据兼容）。
+	 *  用于在打开 Theme Card 时自动跳转到最近打开的 Session。
+	 */
+	lastOpenedAt: string | null,
 };
 
 export type ThemeCard = {
