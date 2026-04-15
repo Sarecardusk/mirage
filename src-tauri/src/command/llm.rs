@@ -1,3 +1,5 @@
+use std::sync::atomic::Ordering;
+
 use tauri::ipc::Channel;
 use tauri::State;
 
@@ -17,6 +19,10 @@ pub async fn invoke_llm_generation(
     theme_card_id: String,
     channel: Channel<LlmStreamEvent>,
 ) -> Result<(), IpcError> {
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
+
     if session_id.trim().is_empty() {
         return Err(IpcError::from(DomainError::ValidationFailed {
             field: "sessionId".to_string(),
@@ -55,7 +61,12 @@ pub async fn invoke_llm_generation(
         }));
     }
 
-    let config = state.llm_config.read().await.clone();
+    let config = state
+        .app_config_repo
+        .get_llm_config()
+        .await
+        .map_err(IpcError::from)?;
+
     if config.api_key.trim().is_empty() {
         return Err(IpcError::from(DomainError::ValidationFailed {
             field: "apiKey".to_string(),

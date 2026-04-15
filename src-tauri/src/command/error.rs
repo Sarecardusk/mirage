@@ -30,6 +30,17 @@ impl IpcError {
             retryable,
         }
     }
+
+    /// 启动流程尚未结束时，业务命令统一返回这个错误
+    ///（也就是 `AppState::ready == false` 的阶段）。
+    pub fn app_not_ready() -> Self {
+        Self {
+            category: ErrorCategory::Infra,
+            error_code: "APP_NOT_READY".to_string(),
+            message: "application is still starting up".to_string(),
+            retryable: true,
+        }
+    }
 }
 
 impl From<DomainError> for IpcError {
@@ -52,6 +63,12 @@ impl From<DomainError> for IpcError {
                 error_code: "ENTITY_NOT_FOUND".to_string(),
                 message: format!("session not found: {id}"),
                 retryable: false,
+            },
+            DomainError::StorageFailed { message } => Self {
+                category: ErrorCategory::Infra,
+                error_code: "STORAGE_WRITE_FAILED".to_string(),
+                message,
+                retryable: true,
             },
         }
     }

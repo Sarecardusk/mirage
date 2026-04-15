@@ -1,3 +1,5 @@
+use std::sync::atomic::Ordering;
+
 use tauri::State;
 
 use crate::command::error::IpcError;
@@ -7,8 +9,14 @@ use crate::domain::llm::{LlmConfig, SetLlmConfigInput};
 #[tauri::command]
 #[specta::specta]
 pub async fn get_llm_config(state: State<'_, AppState>) -> Result<LlmConfig, IpcError> {
-    let config = state.llm_config.read().await.clone();
-    Ok(config)
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
+    state
+        .app_config_repo
+        .get_llm_config()
+        .await
+        .map_err(IpcError::from)
 }
 
 #[tauri::command]
@@ -17,6 +25,9 @@ pub async fn set_llm_config(
     state: State<'_, AppState>,
     input: SetLlmConfigInput,
 ) -> Result<LlmConfig, IpcError> {
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
     input.validate()?;
 
     let config = LlmConfig {
@@ -25,8 +36,11 @@ pub async fn set_llm_config(
         model: input.model.trim().to_string(),
     };
 
-    let mut config_guard = state.llm_config.write().await;
-    *config_guard = config.clone();
+    state
+        .app_config_repo
+        .set_llm_config(&config)
+        .await
+        .map_err(IpcError::from)?;
 
     Ok(config)
 }

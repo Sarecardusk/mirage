@@ -1,3 +1,5 @@
+use std::sync::atomic::Ordering;
+
 use tauri::State;
 
 use crate::command::error::IpcError;
@@ -14,6 +16,9 @@ pub async fn create_session(
     state: State<'_, AppState>,
     input: CreateSessionInput,
 ) -> Result<Session, IpcError> {
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
     input.validate()?;
 
     let maybe_theme_card = state
@@ -40,6 +45,9 @@ pub async fn list_messages(
     state: State<'_, AppState>,
     session_id: String,
 ) -> Result<Vec<Message>, IpcError> {
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
     if session_id.trim().is_empty() {
         return Err(IpcError::from(DomainError::ValidationFailed {
             field: "sessionId".to_string(),
@@ -59,6 +67,9 @@ pub async fn append_message(
     state: State<'_, AppState>,
     input: AppendMessageInput,
 ) -> Result<Message, IpcError> {
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
     input.validate()?;
 
     state

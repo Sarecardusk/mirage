@@ -1,6 +1,6 @@
 # Mirage 协作指南
 
-> Last Updated: 2026-04-05
+> Last Updated: 2026-04-15
 
 此文件只做轻量导航与协作约定。
 产品与系统细节请在对应文档中维护。
@@ -54,23 +54,40 @@ docs/
 
 ## 当前实现状态
 
-项目处于脚手架阶段，文档描述的架构为目标态。
+项目已完成 MVP 最简会话循环与 SurrealDB 持久化集成，具备端到端可用的基础功能。
 
 文档中的约束分两类：
 
-- 当前已生效：协作流程、文档门禁、基础工程链、capability/CSP 开发态。
-- 落地即生效：Theme Card / Session / 迁移 / 检索 / 网关 / 流式等业务约束。
+- 当前已生效：协作流程、文档门禁、基础工程链、capability/CSP 开发态、四层架构分层、IPC 契约模式、SurrealDB 持久化。
+- 落地即生效：迁移版本管理、检索、流式中断 / 重试等高级业务约束。
 
-**已就绪**：Tauri 2 + Vue 3 + TypeScript 脚手架、Vite 构建、ESLint + Prettier + Vitest 工程链。
+**工程链**：Tauri 2 + Vue 3 + TypeScript、Vite 构建、ESLint + Prettier + Vitest、TailwindCSS + shadcn-vue。
+
+**后端四层**（`src-tauri/src/`）：
+
+- `domain/`：ThemeCard、Session、LLM 实体与 Repository trait。
+- `infra/`：SurrealDB 持久化实现（ThemeCard / Session / AppConfig）、数据库初始化与迁移。
+- `gateway/`：LLM HTTP 流式网关（reqwest + SSE）。
+- `command/`：9 个 IPC 命令（ThemeCard CRUD × 3、Session × 3、Config × 2、LLM × 1）。
+
+**前端**（`src/`）：
+
+- `views/`：ThemeCardListView、ChatView、SettingsView（3 个页面）。
+- `components/`：AppLayout + shadcn-vue UI 组件库。
+- `composables/`：useChat、useLlmStream。
+- `services/`：themeCard、session、config、llm（封装 `invoke()` 调用）。
+- `schemas/`：themeCard、session、config、llm（Zod 运行时校验）。
+- `types/`：bindings.ts（Specta 自动生成）。
+- `router.ts`：单文件路由（vue-router）。
 
 **尚未创建的目录**：
 
-- 前端：`router/`、`views/`、`components/`、`stores/`、`composables/`、`services/`、`schemas/`、`types/`
-- 后端：`domain/`、`infra/`、`gateway/`、`command/`
+- 前端：`stores/`（Pinia store 尚无业务需求）。
 
-**尚未安装的架构依赖**：见下方"预批准依赖"节。
+**尚未安装的预批准依赖**：
 
-**尚无业务逻辑**：仅有 `greet` 演示命令，无领域实体或 IPC 契约实现。
+- 前端：`@tauri-store/pinia`。
+- 后端：`ring`、`argon2`、`validator`（安全与校验相关，按需引入）。
 
 ## 预批准依赖
 

@@ -78,6 +78,8 @@ mod tests {
         };
 
         let result = input.validate();
-        assert!(matches!(result, Err(DomainError::ValidationFailed { field }) if field == "systemPrompt"));
+        assert!(
+            matches!(result, Err(DomainError::ValidationFailed { field }) if field == "systemPrompt")
+        );
     }
 }

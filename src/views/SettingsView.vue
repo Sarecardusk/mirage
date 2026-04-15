@@ -55,7 +55,7 @@ onMounted(() => {
   <AppLayout>
     <div class="max-w-2xl space-y-4 rounded-lg border p-6">
       <h3 class="text-lg font-semibold">LLM API 设置</h3>
-      <p class="text-sm text-muted-foreground">MVP 阶段配置仅保存在内存中，重启后需要重新填写。</p>
+      <p class="text-sm text-muted-foreground">配置通过 SurrealDB 持久化存储，重启后自动加载。</p>
 
       <div class="space-y-1">
         <label class="text-sm font-medium">API Endpoint</label>

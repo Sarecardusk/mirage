@@ -99,8 +99,12 @@ mod tests {
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum LlmStreamEvent {
-    TokenChunk { text: String },
-    Completion { full_text: String },
+    TokenChunk {
+        text: String,
+    },
+    Completion {
+        full_text: String,
+    },
     Error {
         error_code: String,
         message: String,
