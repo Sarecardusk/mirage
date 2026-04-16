@@ -24,8 +24,10 @@ pub fn run() {
             command::session::list_sessions,
             command::session::touch_session,
             command::theme_card::create_theme_card,
+            command::theme_card::delete_theme_card,
             command::theme_card::get_theme_card,
             command::theme_card::list_theme_cards,
+            command::theme_card::update_theme_card,
         ]);
 
     #[cfg(debug_assertions)]

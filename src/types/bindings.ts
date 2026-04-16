@@ -14,8 +14,10 @@ export const commands = {
 	listSessions: (themeCardId: string) => typedError<Session[], IpcError>(__TAURI_INVOKE("list_sessions", { themeCardId })),
 	touchSession: (sessionId: string) => typedError<null, IpcError>(__TAURI_INVOKE("touch_session", { sessionId })),
 	createThemeCard: (input: CreateThemeCardInput) => typedError<ThemeCard, IpcError>(__TAURI_INVOKE("create_theme_card", { input })),
+	deleteThemeCard: (themeCardId: string) => typedError<null, IpcError>(__TAURI_INVOKE("delete_theme_card", { themeCardId })),
 	getThemeCard: (themeCardId: string) => typedError<ThemeCard, IpcError>(__TAURI_INVOKE("get_theme_card", { themeCardId })),
 	listThemeCards: () => typedError<ThemeCard[], IpcError>(__TAURI_INVOKE("list_theme_cards")),
+	updateThemeCard: (input: UpdateThemeCardInput) => typedError<ThemeCard, IpcError>(__TAURI_INVOKE("update_theme_card", { input })),
 };
 
 /* Types */
@@ -79,6 +81,12 @@ export type ThemeCard = {
 	systemPrompt: string,
 	createdAt: string,
 	updatedAt: string,
+};
+
+export type UpdateThemeCardInput = {
+	themeCardId: string,
+	name: string,
+	systemPrompt: string,
 };
 
 /* Tauri Specta runtime */

@@ -5,7 +5,9 @@ use tauri::State;
 use crate::command::error::IpcError;
 use crate::command::state::AppState;
 use crate::domain::error::DomainError;
-use crate::domain::theme_card::{CreateThemeCardInput, ThemeCard, ThemeCardRepository};
+use crate::domain::theme_card::{
+    CreateThemeCardInput, ThemeCard, ThemeCardRepository, UpdateThemeCardInput,
+};
 
 #[tauri::command]
 #[specta::specta]
@@ -54,4 +56,42 @@ pub async fn get_theme_card(
                 id: theme_card_id.clone(),
             })
         })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn update_theme_card(
+    state: State<'_, AppState>,
+    input: UpdateThemeCardInput,
+) -> Result<ThemeCard, IpcError> {
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
+    input.validate()?;
+    state
+        .theme_card_repo
+        .update(input)
+        .await
+        .map_err(IpcError::from)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_theme_card(
+    state: State<'_, AppState>,
+    theme_card_id: String,
+) -> Result<(), IpcError> {
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
+    if theme_card_id.trim().is_empty() {
+        return Err(IpcError::from(DomainError::ValidationFailed {
+            field: "themeCardId".to_string(),
+        }));
+    }
+    state
+        .theme_card_repo
+        .delete(theme_card_id.as_str())
+        .await
+        .map_err(IpcError::from)
 }

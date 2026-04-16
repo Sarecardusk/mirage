@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { CreateThemeCardInputSchema, ThemeCardSchema } from "@/schemas/themeCard";
+import {
+  CreateThemeCardInputSchema,
+  ThemeCardSchema,
+  UpdateThemeCardInputSchema,
+} from "@/schemas/themeCard";
 
 const validThemeCard = {
   id: "card-1",
@@ -58,6 +62,36 @@ describe("CreateThemeCardInputSchema", () => {
   it("rejects empty systemPrompt", () => {
     expect(() =>
       CreateThemeCardInputSchema.parse({ name: "Detective", systemPrompt: "" }),
+    ).toThrow();
+  });
+});
+
+describe("UpdateThemeCardInputSchema", () => {
+  it("parses valid input", () => {
+    const parsed = UpdateThemeCardInputSchema.parse({
+      themeCardId: "card-1",
+      name: "Updated Name",
+      systemPrompt: "Updated prompt",
+    });
+    expect(parsed.themeCardId).toBe("card-1");
+    expect(parsed.name).toBe("Updated Name");
+  });
+
+  it("rejects empty themeCardId", () => {
+    expect(() =>
+      UpdateThemeCardInputSchema.parse({ themeCardId: "", name: "Name", systemPrompt: "Prompt" }),
+    ).toThrow();
+  });
+
+  it("rejects empty name", () => {
+    expect(() =>
+      UpdateThemeCardInputSchema.parse({ themeCardId: "card-1", name: "", systemPrompt: "Prompt" }),
+    ).toThrow();
+  });
+
+  it("rejects empty systemPrompt", () => {
+    expect(() =>
+      UpdateThemeCardInputSchema.parse({ themeCardId: "card-1", name: "Name", systemPrompt: "" }),
     ).toThrow();
   });
 });

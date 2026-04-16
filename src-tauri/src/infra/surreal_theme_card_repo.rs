@@ -4,7 +4,9 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use crate::domain::error::DomainError;
-use crate::domain::theme_card::{CreateThemeCardInput, ThemeCard, ThemeCardRepository};
+use crate::domain::theme_card::{
+    CreateThemeCardInput, ThemeCard, ThemeCardRepository, UpdateThemeCardInput,
+};
 use crate::infra::database::Database;
 
 pub struct SurrealThemeCardRepo {
@@ -22,34 +24,32 @@ impl ThemeCardRepository for SurrealThemeCardRepo {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now().to_rfc3339();
 
-        // 这里用 serde_json::Value 作为 `content`，才能满足 SurrealDB 的类型约束。
-        self.db
+        // 用 serde_json::Value 作为 content 满足 SurrealDB 的类型约束；
+        // RETURN 子句确保返回与 list/get_by_id 格式一致的字段（record::id 去除表名前缀）。
+        let rows: Vec<serde_json::Value> = self
+            .db
             .inner()
-            .create::<Option<serde_json::Value>>(("theme_card", id.as_str()))
-            .content(serde_json::json!({
-                "schema_version": 1,
-                "name": input.name.trim(),
-                "system_prompt": input.system_prompt.trim(),
-                "created_at": &now,
-                "updated_at": &now,
-            }))
+            .query("CREATE type::record('theme_card', $id) CONTENT { schema_version: 1, name: $name, system_prompt: $system_prompt, created_at: $created_at, updated_at: $updated_at } RETURN record::id(id) AS id, schema_version, name, system_prompt, created_at, updated_at")
+            .bind(("id", id.clone()))
+            .bind(("name", input.name.trim().to_string()))
+            .bind(("system_prompt", input.system_prompt.trim().to_string()))
+            .bind(("created_at", now.clone()))
+            .bind(("updated_at", now.clone()))
             .await
             .map_err(|e| DomainError::StorageFailed {
                 message: e.to_string(),
             })?
-            .ok_or_else(|| DomainError::StorageFailed {
-                message: "create theme_card returned no record".to_string(),
+            .take(0)
+            .map_err(|e| DomainError::StorageFailed {
+                message: e.to_string(),
             })?;
 
-        // 这些字段都来自当前输入与本地生成值，直接回组装结果即可。
-        Ok(ThemeCard {
-            id,
-            schema_version: 1,
-            name: input.name.trim().to_string(),
-            system_prompt: input.system_prompt.trim().to_string(),
-            created_at: now.clone(),
-            updated_at: now,
-        })
+        rows.into_iter()
+            .next()
+            .ok_or_else(|| DomainError::StorageFailed {
+                message: "create theme_card returned no record".to_string(),
+            })
+            .and_then(json_to_theme_card)
     }
 
     async fn list(&self) -> Result<Vec<ThemeCard>, DomainError> {
@@ -92,6 +92,75 @@ impl ThemeCardRepository for SurrealThemeCardRepo {
             None => Ok(None),
         }
     }
+
+    async fn update(&self, input: UpdateThemeCardInput) -> Result<ThemeCard, DomainError> {
+        let now = Utc::now().to_rfc3339();
+
+        // RETURN 子句与 create/list/get_by_id 保持一致的字段格式；
+        // 若记录不存在，UPDATE 返回空数组，直接映射为 ThemeCardNotFound。
+        let rows: Vec<serde_json::Value> = self
+            .db
+            .inner()
+            .query("UPDATE type::record('theme_card', $id) SET name = $name, system_prompt = $system_prompt, updated_at = $updated_at RETURN record::id(id) AS id, schema_version, name, system_prompt, created_at, updated_at")
+            .bind(("id", input.theme_card_id.clone()))
+            .bind(("name", input.name.trim().to_string()))
+            .bind(("system_prompt", input.system_prompt.trim().to_string()))
+            .bind(("updated_at", now))
+            .await
+            .map_err(|e| DomainError::StorageFailed {
+                message: e.to_string(),
+            })?
+            .take(0)
+            .map_err(|e| DomainError::StorageFailed {
+                message: e.to_string(),
+            })?;
+
+        rows.into_iter()
+            .next()
+            .ok_or_else(|| DomainError::ThemeCardNotFound {
+                id: input.theme_card_id.clone(),
+            })
+            .and_then(json_to_theme_card)
+    }
+
+    async fn delete(&self, id: &str) -> Result<(), DomainError> {
+        // 先确认卡片存在，不存在则快速失败
+        if self.get_by_id(id).await?.is_none() {
+            return Err(DomainError::ThemeCardNotFound { id: id.to_string() });
+        }
+
+        // 第一步：删除该 Theme Card 下所有 Session 的消息（先删子级）
+        self.db
+            .inner()
+            .query("DELETE message WHERE session_id IN (SELECT VALUE record::id(id) FROM session WHERE theme_card_id = $card_id)")
+            .bind(("card_id", id.to_string()))
+            .await
+            .map_err(|e| DomainError::StorageFailed {
+                message: e.to_string(),
+            })?;
+
+        // 第二步：删除所有关联 Session
+        self.db
+            .inner()
+            .query("DELETE session WHERE theme_card_id = $card_id")
+            .bind(("card_id", id.to_string()))
+            .await
+            .map_err(|e| DomainError::StorageFailed {
+                message: e.to_string(),
+            })?;
+
+        // 第三步：删除 Theme Card 本身
+        self.db
+            .inner()
+            .query("DELETE type::record('theme_card', $id)")
+            .bind(("id", id.to_string()))
+            .await
+            .map_err(|e| DomainError::StorageFailed {
+                message: e.to_string(),
+            })?;
+
+        Ok(())
+    }
 }
 
 // ── JSON 转领域对象 ───────────────────────────────────────────────────────────
@@ -131,15 +200,29 @@ fn json_to_theme_card(val: serde_json::Value) -> Result<ThemeCard, DomainError> 
 mod tests {
     use std::sync::Arc;
 
-    use crate::domain::theme_card::{CreateThemeCardInput, ThemeCardRepository};
+    use crate::domain::error::DomainError;
+    use crate::domain::session::SessionRepository;
+    use crate::domain::theme_card::{
+        CreateThemeCardInput, ThemeCardRepository, UpdateThemeCardInput,
+    };
     use crate::infra::database::Database;
     use crate::infra::migration;
+    use crate::infra::surreal_session_repo::SurrealSessionRepo;
     use crate::infra::surreal_theme_card_repo::SurrealThemeCardRepo;
 
     async fn make_repo() -> SurrealThemeCardRepo {
         let db = Arc::new(Database::connect_memory().await.unwrap());
         migration::run(&db).await.unwrap();
         SurrealThemeCardRepo::new(db)
+    }
+
+    // 同时返回 theme card repo 和 session repo（共享同一个 db），用于级联删除测试
+    async fn make_repos() -> (SurrealThemeCardRepo, SurrealSessionRepo) {
+        let db = Arc::new(Database::connect_memory().await.unwrap());
+        migration::run(&db).await.unwrap();
+        let tc_repo = SurrealThemeCardRepo::new(Arc::clone(&db));
+        let s_repo = SurrealSessionRepo::new(Arc::clone(&db));
+        (tc_repo, s_repo)
     }
 
     #[tokio::test]
@@ -190,5 +273,105 @@ mod tests {
         let repo = make_repo().await;
         let result = repo.get_by_id("nonexistent").await.unwrap();
         assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn update_changes_name_and_system_prompt() {
+        let repo = make_repo().await;
+        let card = repo
+            .create(CreateThemeCardInput {
+                name: "Original".to_string(),
+                system_prompt: "Old prompt".to_string(),
+            })
+            .await
+            .unwrap();
+
+        let original_updated_at = card.updated_at.clone();
+
+        let updated = repo
+            .update(UpdateThemeCardInput {
+                theme_card_id: card.id.clone(),
+                name: "Renamed".to_string(),
+                system_prompt: "New prompt".to_string(),
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(updated.id, card.id);
+        assert_eq!(updated.name, "Renamed");
+        assert_eq!(updated.system_prompt, "New prompt");
+        // updated_at 应已更新（可能在同一秒内执行，因此用 >= 比较）
+        assert!(updated.updated_at >= original_updated_at);
+        // immutable fields unchanged
+        assert_eq!(updated.created_at, card.created_at);
+        assert_eq!(updated.schema_version, card.schema_version);
+    }
+
+    #[tokio::test]
+    async fn update_returns_error_for_unknown_id() {
+        let repo = make_repo().await;
+        let result = repo
+            .update(UpdateThemeCardInput {
+                theme_card_id: "no-such-card".to_string(),
+                name: "Name".to_string(),
+                system_prompt: "Prompt".to_string(),
+            })
+            .await;
+        assert!(matches!(result, Err(DomainError::ThemeCardNotFound { .. })));
+    }
+
+    #[tokio::test]
+    async fn delete_removes_theme_card() {
+        let repo = make_repo().await;
+        let card = repo
+            .create(CreateThemeCardInput {
+                name: "Temp".to_string(),
+                system_prompt: "Prompt".to_string(),
+            })
+            .await
+            .unwrap();
+
+        repo.delete(&card.id).await.unwrap();
+
+        assert!(repo.get_by_id(&card.id).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn delete_cascades_sessions_and_messages() {
+        let (tc_repo, s_repo) = make_repos().await;
+        let card = tc_repo
+            .create(CreateThemeCardInput {
+                name: "Card".to_string(),
+                system_prompt: "Prompt".to_string(),
+            })
+            .await
+            .unwrap();
+
+        // 建立 session 和消息
+        let session = s_repo.create_session(&card.id).await.unwrap();
+        s_repo
+            .append_message(
+                &session.id,
+                crate::domain::session::ChatRole::User,
+                "Hi".to_string(),
+            )
+            .await
+            .unwrap();
+
+        // 删除 Theme Card，应级联清理 session 和 message
+        tc_repo.delete(&card.id).await.unwrap();
+
+        // session 不再存在
+        assert!(s_repo.get_session(&session.id).await.unwrap().is_none());
+        // 查询已删 session 的消息应失败（list_messages 会检查 session 存在性）
+        let msg_result = s_repo.list_messages(&session.id).await;
+        assert!(msg_result.is_err());
+    }
+
+    #[tokio::test]
+    async fn delete_returns_error_for_unknown_id() {
+        let repo = make_repo().await;
+        let result = repo.delete("no-such-card").await;
+        assert!(matches!(result, Err(DomainError::ThemeCardNotFound { .. })));
     }
 }

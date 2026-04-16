@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { CreateThemeCardInput, ThemeCard } from "@/types/bindings";
+import type { CreateThemeCardInput, ThemeCard, UpdateThemeCardInput } from "@/types/bindings";
 
 export const ThemeCardSchema = z.object({
   id: z.string(),
@@ -16,3 +16,9 @@ export const CreateThemeCardInputSchema = z.object({
 }) satisfies z.ZodType<CreateThemeCardInput>;
 
 export const ThemeCardListSchema = z.array(ThemeCardSchema);
+
+export const UpdateThemeCardInputSchema = z.object({
+  themeCardId: z.string().min(1, "Theme card ID is required"),
+  name: z.string().min(1, "Name is required"),
+  systemPrompt: z.string().min(1, "System prompt is required"),
+}) satisfies z.ZodType<UpdateThemeCardInput>;
