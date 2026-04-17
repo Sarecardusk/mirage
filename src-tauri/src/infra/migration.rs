@@ -48,6 +48,18 @@ const MIGRATIONS: &[Migration] = &[
         // option<string> 允许空值，兼容 v1 存量 session 记录（旧记录该字段返回 None）
         sql: "DEFINE FIELD last_opened_at ON session TYPE option<string>;",
     },
+    Migration {
+        version: 3,
+        name: "llm_generation_params",
+        // 新增生成参数字段；SCHEMAFULL 表中已有记录该字段自动为 NONE，无需回填
+        sql: "
+            DEFINE FIELD temperature       ON app_config TYPE option<float>;
+            DEFINE FIELD max_tokens        ON app_config TYPE option<int>;
+            DEFINE FIELD top_p             ON app_config TYPE option<float>;
+            DEFINE FIELD frequency_penalty ON app_config TYPE option<float>;
+            DEFINE FIELD presence_penalty  ON app_config TYPE option<float>;
+        ",
+    },
 ];
 
 // ── 对外执行入口 ───────────────────────────────────────────────────────────────

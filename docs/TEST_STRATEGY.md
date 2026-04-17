@@ -1,6 +1,6 @@
 # Mirage Test Strategy
 
-> Last Updated: 2026-04-05
+> Last Updated: 2026-04-17
 
 本文件定义 Mirage 约束的验证策略。
 目标不是“多写测试”，而是让每个高成本约束都有证据。
@@ -19,12 +19,14 @@
 - `domain/`：纯单元测试，覆盖实体规则、状态机、迁移函数。
 - `infra/`：一致性与失败路径测试，覆盖存储失败、资产失败、回滚、悬挂引用。
 - `gateway/`：供应商响应归一化测试，覆盖标准成功、可重试失败、不可重试失败、格式异常。
+  - 对 OpenAI-compatible endpoint 归一化至少覆盖 base URL、`/chat/completions`、`/models` 三种输入形式。
 - `command/`：契约集成测试，覆盖命令入参、错误收敛、per-entity mutex、流式终止语义。
 
 ### Frontend 侧
 
 - `schemas/`：Zod schema 对齐测试，覆盖必填字段、可选字段、错误收敛。
 - `services/`：IPC 调用封装测试，覆盖成功返回、结构化错误、流式消费、监听器注销。
+  - LLM 配置链路至少覆盖：保存配置、空 `model` 仍可获取模型列表、测试连接仍要求 `model`。
 - `composables/`：状态流转测试，覆盖 loading、retryable、degraded、cancelled。
 
 ### Zod ↔ Rust 对齐测试要求

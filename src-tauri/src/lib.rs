@@ -16,6 +16,8 @@ pub fn run() {
         tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
             command::config::get_llm_config,
             command::config::set_llm_config,
+            command::config::list_llm_models,
+            command::config::test_llm_connection,
             command::llm::invoke_llm_generation,
             command::session::append_message,
             command::session::create_session,

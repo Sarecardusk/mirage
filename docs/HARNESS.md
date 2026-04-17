@@ -1,6 +1,6 @@
 # Mirage Harness Boundaries
 
-> Last Updated: 2026-04-05
+> Last Updated: 2026-04-17
 
 本文件定义 Mirage 作为一个 Harness 工程时的执行约束。
 这里的 Harness，不是产品规格，也不是页面设计，而是“命令如何执行、错误如何收敛、事件如何流动、故障如何诊断、变更如何受控”的工程护栏。
@@ -34,7 +34,9 @@ Harness 的公开工程面固定为以下五类：
 ### 命令分类
 
 - 读命令：无副作用查询，允许并发执行。
+  - 例如 `get_llm_config`、`list_llm_models`、`test_llm_connection`。
 - 变更命令：会修改领域状态或持久化状态，必须受 per-entity mutex 保护（见下方"Per-entity Mutex 实现规范"）。
+  - 例如 `set_llm_config`、`create_theme_card`、`append_message`。
 - 流式命令：当前仅 `invoke_llm_generation`，同时具备命令与事件双重语义。
 
 ### 默认规则

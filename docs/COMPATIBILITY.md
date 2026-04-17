@@ -1,6 +1,6 @@
 # Mirage Compatibility Policy
 
-> Last Updated: 2026-04-05
+> Last Updated: 2026-04-17
 
 本文件定义 Mirage 的兼容性语义，防止“看似小改动，实际破坏公开契约”的情况进入主线。
 
@@ -78,15 +78,23 @@
 
 ### ResourceCrudCommand
 
-| 命令名              | 方向      | 说明                   | 状态    | Owner     |
-| ------------------- | --------- | ---------------------- | ------- | --------- |
-| `get_app_config`    | UI → Rust | 读取应用级配置         | Planned | Rust Core |
-| `update_app_config` | UI → Rust | 写入应用级非敏感配置   | Planned | Rust Core |
-| `list_theme_cards`  | UI → Rust | 列出所有 Theme Card    | Planned | Rust Core |
-| `get_theme_card`    | UI → Rust | 按 ID 读取单张卡片     | Planned | Rust Core |
-| `delete_theme_card` | UI → Rust | 删除卡片（含引用清理） | Planned | Rust Core |
-| `list_sessions`     | UI → Rust | 列出指定卡片的 Session | Planned | Rust Core |
-| `delete_session`    | UI → Rust | 删除 Session           | Planned | Rust Core |
+| 命令名                | 方向      | 说明                                          | 状态        | Owner     |
+| --------------------- | --------- | --------------------------------------------- | ----------- | --------- |
+| `get_llm_config`      | UI → Rust | 读取 LLM 配置                                 | Implemented | Rust Core |
+| `set_llm_config`      | UI → Rust | 写入 LLM 配置                                 | Implemented | Rust Core |
+| `list_llm_models`     | UI → Rust | 用 endpoint + apiKey 查询模型列表             | Implemented | Rust Core |
+| `test_llm_connection` | UI → Rust | 用 endpoint + apiKey + model 做最小连通性测试 | Implemented | Rust Core |
+| `list_theme_cards`    | UI → Rust | 列出所有 Theme Card                           | Planned     | Rust Core |
+| `get_theme_card`      | UI → Rust | 按 ID 读取单张卡片                            | Planned     | Rust Core |
+| `delete_theme_card`   | UI → Rust | 删除卡片（含引用清理）                        | Planned     | Rust Core |
+| `list_sessions`       | UI → Rust | 列出指定卡片的 Session                        | Planned     | Rust Core |
+| `delete_session`      | UI → Rust | 删除 Session                                  | Planned     | Rust Core |
+
+### 应用配置持久化契约
+
+| 记录             | 关键字段                                                                                                           | 状态        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------ | ----------- |
+| `app_config:llm` | `endpoint`、`api_key`、`model`、`temperature?`、`max_tokens?`、`top_p?`、`frequency_penalty?`、`presence_penalty?` | Implemented |
 
 ### 流式事件类型（Channel API）
 

@@ -21,7 +21,7 @@ impl AppConfigRepo {
         let rows: Vec<serde_json::Value> = self
             .db
             .inner()
-            .query("SELECT endpoint, api_key, model FROM type::record('app_config', $key)")
+            .query("SELECT endpoint, api_key, model, temperature, max_tokens, top_p, frequency_penalty, presence_penalty FROM type::record('app_config', $key)")
             .bind(("key", LLM_RECORD_KEY))
             .await
             .map_err(|e| DomainError::StorageFailed {
@@ -48,6 +48,13 @@ impl AppConfigRepo {
                         .as_str()
                         .map(str::to_string)
                         .unwrap_or(defaults.model),
+                    temperature: val["temperature"].as_f64(),
+                    max_tokens: val["max_tokens"]
+                        .as_i64()
+                        .and_then(|v| u32::try_from(v).ok()),
+                    top_p: val["top_p"].as_f64(),
+                    frequency_penalty: val["frequency_penalty"].as_f64(),
+                    presence_penalty: val["presence_penalty"].as_f64(),
                 })
             }
             None => Ok(LlmConfig::default()),
@@ -59,11 +66,16 @@ impl AppConfigRepo {
     pub async fn set_llm_config(&self, config: &LlmConfig) -> Result<(), DomainError> {
         self.db
             .inner()
-            .query("UPDATE type::record('app_config', $key) CONTENT { endpoint: $endpoint, api_key: $api_key, model: $model }")
+            .query("UPDATE type::record('app_config', $key) CONTENT { endpoint: $endpoint, api_key: $api_key, model: $model, temperature: $temperature, max_tokens: $max_tokens, top_p: $top_p, frequency_penalty: $frequency_penalty, presence_penalty: $presence_penalty }")
             .bind(("key", LLM_RECORD_KEY))
             .bind(("endpoint", config.endpoint.clone()))
             .bind(("api_key", config.api_key.clone()))
             .bind(("model", config.model.clone()))
+            .bind(("temperature", config.temperature))
+            .bind(("max_tokens", config.max_tokens))
+            .bind(("top_p", config.top_p))
+            .bind(("frequency_penalty", config.frequency_penalty))
+            .bind(("presence_penalty", config.presence_penalty))
             .await
             .map_err(|e| DomainError::StorageFailed {
                 message: e.to_string(),
@@ -129,7 +141,8 @@ mod tests {
     async fn get_returns_defaults_after_seed() {
         let repo = make_repo().await;
         let config = repo.get_llm_config().await.unwrap();
-        assert_eq!(config.endpoint, "https://api.openai.com/v1");
+        assert_eq!(config.endpoint, "https://api.deepseek.com");
+        assert_eq!(config.model, "deepseek-chat");
     }
 
     #[tokio::test]
@@ -144,5 +157,53 @@ mod tests {
         let fetched = repo.get_llm_config().await.unwrap();
         assert_eq!(fetched.api_key, "sk-test-key");
         assert_eq!(fetched.model, "gpt-4o");
+    }
+
+    #[tokio::test]
+    async fn generation_params_roundtrip() {
+        let repo = make_repo().await;
+
+        let config = crate::domain::llm::LlmConfig {
+            endpoint: "https://api.deepseek.com".to_string(),
+            api_key: "sk-test".to_string(),
+            model: "deepseek-chat".to_string(),
+            temperature: Some(0.8),
+            max_tokens: Some(256),
+            top_p: Some(0.95),
+            frequency_penalty: Some(-0.5),
+            presence_penalty: Some(1.0),
+        };
+        repo.set_llm_config(&config).await.unwrap();
+
+        let fetched = repo.get_llm_config().await.unwrap();
+        assert_eq!(fetched.temperature, Some(0.8));
+        assert_eq!(fetched.max_tokens, Some(256));
+        assert_eq!(fetched.top_p, Some(0.95));
+        assert_eq!(fetched.frequency_penalty, Some(-0.5));
+        assert_eq!(fetched.presence_penalty, Some(1.0));
+    }
+
+    #[tokio::test]
+    async fn generation_params_null_roundtrip() {
+        let repo = make_repo().await;
+
+        let config = crate::domain::llm::LlmConfig {
+            endpoint: "https://api.deepseek.com".to_string(),
+            api_key: "sk-test".to_string(),
+            model: "deepseek-chat".to_string(),
+            temperature: None,
+            max_tokens: None,
+            top_p: None,
+            frequency_penalty: None,
+            presence_penalty: None,
+        };
+        repo.set_llm_config(&config).await.unwrap();
+
+        let fetched = repo.get_llm_config().await.unwrap();
+        assert_eq!(fetched.temperature, None);
+        assert_eq!(fetched.max_tokens, None);
+        assert_eq!(fetched.top_p, None);
+        assert_eq!(fetched.frequency_penalty, None);
+        assert_eq!(fetched.presence_penalty, None);
     }
 }

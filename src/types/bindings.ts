@@ -6,6 +6,10 @@ import { invoke as __TAURI_INVOKE, Channel } from "@tauri-apps/api/core";
 export const commands = {
 	getLlmConfig: () => typedError<LlmConfig, IpcError>(__TAURI_INVOKE("get_llm_config")),
 	setLlmConfig: (input: LlmConfig) => typedError<LlmConfig, IpcError>(__TAURI_INVOKE("set_llm_config", { input })),
+	// 用表单中的实时 endpoint + api_key（无需先保存）查询该 endpoint 支持的模型列表。
+	listLlmModels: (input: ListLlmModelsInput) => typedError<string[], IpcError>(__TAURI_INVOKE("list_llm_models", { input })),
+	// 用表单中的实时配置发一次最小请求（max_tokens=1）验证连通性。
+	testLlmConnection: (input: TestLlmConnectionInput) => typedError<null, IpcError>(__TAURI_INVOKE("test_llm_connection", { input })),
 	invokeLlmGeneration: (sessionId: string, themeCardId: string, channel: Channel<LlmStreamEvent>) => typedError<null, IpcError>(__TAURI_INVOKE("invoke_llm_generation", { sessionId, themeCardId, channel })),
 	appendMessage: (input: AppendMessageInput) => typedError<Message, IpcError>(__TAURI_INVOKE("append_message", { input })),
 	createSession: (input: CreateSessionInput) => typedError<Session, IpcError>(__TAURI_INVOKE("create_session", { input })),
@@ -47,10 +51,20 @@ export type IpcError = {
 	retryable: boolean,
 };
 
+export type ListLlmModelsInput = {
+	endpoint: string,
+	apiKey: string,
+};
+
 export type LlmConfig = {
 	endpoint: string,
 	apiKey: string,
 	model: string,
+	temperature: number | null,
+	maxTokens: number | null,
+	topP: number | null,
+	frequencyPenalty: number | null,
+	presencePenalty: number | null,
 };
 
 export type LlmStreamEvent = { type: "tokenChunk"; text: string } | { type: "completion"; fullText: string } | { type: "error"; errorCode: string; message: string; retryable: boolean };
@@ -72,6 +86,12 @@ export type Session = {
 	 *  用于在打开 Theme Card 时自动跳转到最近打开的 Session。
 	 */
 	lastOpenedAt: string | null,
+};
+
+export type TestLlmConnectionInput = {
+	endpoint: string,
+	apiKey: string,
+	model: string,
 };
 
 export type ThemeCard = {
