@@ -1,7 +1,7 @@
 {
   "name": "mirage",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "scripts": {
     "build": "pnpm typecheck && vite build",

@@ -1,6 +1,6 @@
 # 约束索引
 
-> Last Updated: 2026-04-05
+> Last Updated: 2026-04-17
 
 本文件是导航性索引，不定义约束。
 所有约束的权威定义在各来源文档中维护；本索引仅做提取、去重、分级与执行信息汇总，便于一览全貌。
@@ -92,14 +92,15 @@
 
 ## Technology Decision（TD）-- 技术选型决策，变更需文档更新与评审
 
-| ID    | 约束                                                                        | 来源        | Owner                | Enforcement   | Evidence               | Waiver                 | Status      | Evidence Link               | Last Verified |
-| ----- | --------------------------------------------------------------------------- | ----------- | -------------------- | ------------- | ---------------------- | ---------------------- | ----------- | --------------------------- | ------------- |
-| TD-01 | 错误码 Rust/TS 两侧手动维护，保持一一对应                                   | DESIGN.md   | Rust Core + Frontend | DOC + PR + AT | 错误码映射检查         | 仅 ExecPlan + 文档更新 | Planned     | —                           | —             |
-| TD-02 | 前端 Locked 级选型变更需文档更新 + 评审                                     | FRONTEND.md | Frontend             | DOC + PR      | 设计文档记录           | 允许评审后变更         | Implemented | FRONTEND.md 选型表          | 2026-04-05    |
-| TD-03 | Rust 架构遵循 domain/infra/gateway/command 分层，domain 无外向依赖          | DESIGN.md   | Rust Core            | PR + AT       | 分层测试/代码审查      | 仅 ExecPlan + 文档更新 | Implemented | DESIGN.md 架构分层          | 2026-04-05    |
-| TD-04 | 模块入口使用 moduleName.ts/.rs 模式，不用 index.ts/mod.rs                   | AGENTS.md   | 全体贡献者           | PR            | 代码审查               | 允许评审后例外         | Implemented | AGENTS.md 工作约定          | 2026-04-05    |
-| TD-05 | LLM 流式响应用 Tauri Channel API，全局通知用 Tauri Event System             | DESIGN.md   | Rust Core + Frontend | DOC + PR + AT | 流式/事件测试          | 仅 ExecPlan + 文档更新 | Implemented | DESIGN.md IPC 通信模式      | 2026-04-05    |
-| TD-06 | Pinia stores 仅持有 UI 状态与读缓存，领域数据真源在 Rust/SurrealDB          | FRONTEND.md | Frontend             | PR + AT       | store/service 边界测试 | 仅 ExecPlan + 文档更新 | Implemented | FRONTEND.md 状态管理        | 2026-04-05    |
-| TD-07 | Tauri Capability 遵循最小权限，新增插件同步更新 `capabilities/default.json` | SECURITY.md | Rust Core            | DOC + PR      | capability 变更审查    | 禁止绕过               | Implemented | `capabilities/default.json` | 2026-04-05    |
-| TD-08 | 生产环境 CSP 必须为 `'self'` + 必需 API 域名，dev 下可为 null               | SECURITY.md | Rust Core            | DOC + PR + RT | 发布检查单             | 仅发布评审例外         | Implemented | `tauri.conf.json` CSP 配置  | 2026-04-05    |
-| TD-09 | SFC 内部代码顺序遵循八段排列约定                                            | FRONTEND.md | Frontend             | PR            | 代码审查               | 允许评审后例外         | Implemented | FRONTEND.md 八段约定        | 2026-04-05    |
+| ID    | 约束                                                                        | 来源                                              | Owner                  | Enforcement   | Evidence                               | Waiver                 | Status      | Evidence Link               | Last Verified |
+| ----- | --------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------- | ------------- | -------------------------------------- | ---------------------- | ----------- | --------------------------- | ------------- |
+| TD-01 | 错误码 Rust/TS 两侧手动维护，保持一一对应                                   | DESIGN.md                                         | Rust Core + Frontend   | DOC + PR + AT | 错误码映射检查                         | 仅 ExecPlan + 文档更新 | Planned     | —                           | —             |
+| TD-02 | 前端 Locked 级选型变更需文档更新 + 评审                                     | FRONTEND.md                                       | Frontend               | DOC + PR      | 设计文档记录                           | 允许评审后变更         | Implemented | FRONTEND.md 选型表          | 2026-04-05    |
+| TD-03 | Rust 架构遵循 domain/infra/gateway/command 分层，domain 无外向依赖          | DESIGN.md                                         | Rust Core              | PR + AT       | 分层测试/代码审查                      | 仅 ExecPlan + 文档更新 | Implemented | DESIGN.md 架构分层          | 2026-04-05    |
+| TD-04 | 模块入口使用 moduleName.ts/.rs 模式，不用 index.ts/mod.rs                   | AGENTS.md                                         | 全体贡献者             | PR            | 代码审查                               | 允许评审后例外         | Implemented | AGENTS.md 工作约定          | 2026-04-05    |
+| TD-05 | LLM 流式响应用 Tauri Channel API，全局通知用 Tauri Event System             | DESIGN.md                                         | Rust Core + Frontend   | DOC + PR + AT | 流式/事件测试                          | 仅 ExecPlan + 文档更新 | Implemented | DESIGN.md IPC 通信模式      | 2026-04-05    |
+| TD-06 | Pinia stores 仅持有 UI 状态与读缓存，领域数据真源在 Rust/SurrealDB          | FRONTEND.md                                       | Frontend               | PR + AT       | store/service 边界测试                 | 仅 ExecPlan + 文档更新 | Implemented | FRONTEND.md 状态管理        | 2026-04-05    |
+| TD-07 | Tauri Capability 遵循最小权限，新增插件同步更新 `capabilities/default.json` | SECURITY.md                                       | Rust Core              | DOC + PR      | capability 变更审查                    | 禁止绕过               | Implemented | `capabilities/default.json` | 2026-04-05    |
+| TD-08 | 生产环境 CSP 必须为 `'self'` + 必需 API 域名，dev 下可为 null               | SECURITY.md                                       | Rust Core              | DOC + PR + RT | 发布检查单                             | 仅发布评审例外         | Implemented | `tauri.conf.json` CSP 配置  | 2026-04-05    |
+| TD-09 | SFC 内部代码顺序遵循八段排列约定                                            | FRONTEND.md                                       | Frontend               | PR            | 代码审查                               | 允许评审后例外         | Implemented | FRONTEND.md 八段约定        | 2026-04-05    |
+| TD-10 | `vault.key` 仅允许作为过渡方案，`v1.0.0` 前必须切换为用户口令派生主密钥     | SECURITY.md, docs/exec-plans/tech-debt-tracker.md | 架构 Owner + Rust Core | DOC + PR      | 发布门禁审查（`DEBT-004` 已 Resolved） | 仅 ExecPlan + 文档更新 | Planned     | —                           | —             |

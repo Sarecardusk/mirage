@@ -1,8 +1,25 @@
 # CHANGELOG
 
-> Last Updated: 2026-04-15
+> Last Updated: 2026-04-17
 
 本文件记录项目对外可见或对协作有影响的重要变更。
+
+## v0.1.3 — Vault 安全存储（2026-04-17）
+
+### 破坏性变更
+
+- **LLM 配置读侧字段重命名**：`LlmConfig.apiKey` → `LlmConfig.apiKeyRef`，明文不再从 `get_llm_config` 返回。
+- **配置写入入参变更**：`set_llm_config` 入参由 `LlmConfig` 改为 `SetLlmConfigInput`（`apiKey` 必填非空）。
+- **新增命令**：`get_llm_api_key`，用于读取 Vault 中当前明文 API Key（供 Settings 预填）。
+
+### 新增
+
+- **本地 Vault 模块**：新增 `infra::vault`，采用 AES-256-GCM 加密文件存储（`vault.key` + `vault.enc`）。
+- **独立 Vault 错误码**：新增 `VAULT_KEY_MISSING`、`VAULT_DECRYPT_FAILED`、`VAULT_WRITE_FAILED`、`VAULT_CORRUPTED`。
+
+### 数据库迁移
+
+- **Migration v4**：新增 `api_key_ref` 字段，并在迁移 hook 中执行一次性明文搬运（`api_key` → Vault），成功后清空 `api_key`。
 
 ## v0.1.2 — LLM 生成参数配置（2026-04-17）
 
