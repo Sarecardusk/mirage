@@ -3,7 +3,13 @@ import { onMounted, ref } from "vue";
 import AppLayout from "@/components/AppLayout.vue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getLlmConfig, setLlmConfig, listLlmModels, testLlmConnection } from "@/services/config";
+import {
+  getLlmApiKey,
+  getLlmConfig,
+  listLlmModels,
+  setLlmConfig,
+  testLlmConnection,
+} from "@/services/config";
 
 const endpoint = ref("");
 const apiKey = ref("");
@@ -42,9 +48,9 @@ async function loadConfig() {
   loading.value = true;
   error.value = "";
   try {
-    const config = await getLlmConfig();
+    const [config, plaintextApiKey] = await Promise.all([getLlmConfig(), getLlmApiKey()]);
     endpoint.value = config.endpoint;
-    apiKey.value = config.apiKey;
+    apiKey.value = plaintextApiKey;
     model.value = config.model;
 
     temperatureEnabled.value = config.temperature !== null;
@@ -140,7 +146,7 @@ onMounted(() => {
   <AppLayout>
     <div class="max-w-2xl space-y-4 rounded-lg border p-6">
       <h3 class="text-lg font-semibold">LLM API 设置</h3>
-      <p class="text-sm text-muted-foreground">配置通过 SurrealDB 持久化存储，重启后自动加载。</p>
+      <p class="text-sm text-muted-foreground">配置落盘为 apiKeyRef，密钥明文仅存于本地 Vault。</p>
 
       <div class="space-y-1">
         <label class="text-sm font-medium">API Endpoint</label>

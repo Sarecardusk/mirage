@@ -1,6 +1,6 @@
 # Mirage Security Boundaries
 
-> Last Updated: 2026-04-05
+> Last Updated: 2026-04-17
 
 本文件定义安全模型的底线约束。该约束优先级高于“易用性降级”。
 
@@ -8,13 +8,24 @@
 
 - 当前版本默认单机本地运行，不引入云账号中心。
 - 若未来引入同步，必须先满足设备配对与端到端加密前提。
-- 未配对设备必须被硬拒绝，不允许”只读同步”例外路径（HR-01）。
+- 未配对设备必须被硬拒绝，不允许“只读同步”例外路径（HR-01）。
 
 ## 密钥与敏感信息策略
 
 - 敏感信息存放于本地加密文件。
-- 主密钥由用户口令派生。
-- 错误口令不得触发明文 fallback 或降级读取（HR-02）。
+- MVP 主密钥使用机器本地随机密钥文件（`vault.key`），后续可升级为“用户口令派生主密钥”。
+- 口令/密钥错误不得触发明文 fallback 或降级读取（HR-02）。
+
+## Vault（MVP）
+
+- 存储位置：`app_data_dir/vault.key`（32-byte 主密钥）与 `app_data_dir/vault.enc`（AES-256-GCM 密文）。
+- 持久化策略：`tmp -> write -> sync_all -> rename` 原子落盘，避免崩溃时产生半写文件。
+- 数据策略：SurrealDB 仅保存 `api_key_ref`，不保存 LLM API Key 明文。
+- 异常策略：
+  - `VAULT_DECRYPT_FAILED`：密文篡改或密钥不匹配，硬拒绝。
+  - `VAULT_KEY_MISSING`：有密文但缺密钥，硬拒绝。
+  - `VAULT_CORRUPTED`：文件结构损坏，不做静默恢复。
+- Windows 现状：MVP 不额外强化 ACL，当前依赖 `app_data_dir` 的用户级隔离；ACL 收紧作为后续独立计划处理。
 
 ## 敏感载荷入口
 

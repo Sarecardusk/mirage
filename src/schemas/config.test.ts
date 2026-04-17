@@ -2,10 +2,22 @@ import { describe, expect, it } from "vitest";
 import {
   ListLlmModelsInputSchema,
   LlmConfigSchema,
+  SetLlmConfigInputSchema,
   TestLlmConnectionInputSchema,
 } from "@/schemas/config";
 
 const validConfig = {
+  endpoint: "https://api.openai.com/v1",
+  apiKeyRef: "llm_api_key",
+  model: "gpt-4o-mini",
+  temperature: null,
+  maxTokens: null,
+  topP: null,
+  frequencyPenalty: null,
+  presencePenalty: null,
+};
+
+const validSetInput = {
   endpoint: "https://api.openai.com/v1",
   apiKey: "sk-test-key",
   model: "gpt-4o-mini",
@@ -43,8 +55,8 @@ describe("LlmConfigSchema", () => {
     expect(() => LlmConfigSchema.parse({ ...validConfig, endpoint: "" })).toThrow();
   });
 
-  it("rejects empty apiKey", () => {
-    expect(() => LlmConfigSchema.parse({ ...validConfig, apiKey: "" })).toThrow();
+  it("rejects empty apiKeyRef", () => {
+    expect(() => LlmConfigSchema.parse({ ...validConfig, apiKeyRef: "" })).toThrow();
   });
 
   it("rejects empty model", () => {
@@ -82,6 +94,17 @@ describe("LlmConfigSchema", () => {
   it("accepts temperature at boundary values", () => {
     expect(() => LlmConfigSchema.parse({ ...validConfig, temperature: 0 })).not.toThrow();
     expect(() => LlmConfigSchema.parse({ ...validConfig, temperature: 2 })).not.toThrow();
+  });
+});
+
+describe("SetLlmConfigInputSchema", () => {
+  it("parses valid input", () => {
+    const parsed = SetLlmConfigInputSchema.parse(validSetInput);
+    expect(parsed.apiKey).toBe("sk-test-key");
+  });
+
+  it("rejects empty apiKey", () => {
+    expect(() => SetLlmConfigInputSchema.parse({ ...validSetInput, apiKey: "" })).toThrow();
   });
 });
 

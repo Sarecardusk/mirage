@@ -4,7 +4,10 @@ use tauri::State;
 
 use crate::command::error::IpcError;
 use crate::command::state::AppState;
-use crate::domain::llm::{ListLlmModelsInput, LlmConfig, TestLlmConnectionInput};
+use crate::domain::llm::{
+    ListLlmModelsInput, LlmConfig, SetLlmConfigInput, TestLlmConnectionInput,
+    DEFAULT_LLM_API_KEY_REF,
+};
 
 #[tauri::command]
 #[specta::specta]
@@ -21,19 +24,37 @@ pub async fn get_llm_config(state: State<'_, AppState>) -> Result<LlmConfig, Ipc
 
 #[tauri::command]
 #[specta::specta]
+pub async fn get_llm_api_key(state: State<'_, AppState>) -> Result<String, IpcError> {
+    if !state.ready.load(Ordering::Acquire) {
+        return Err(IpcError::app_not_ready());
+    }
+
+    Ok(state.vault.get(DEFAULT_LLM_API_KEY_REF).unwrap_or_default())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn set_llm_config(
     state: State<'_, AppState>,
-    input: LlmConfig,
+    input: SetLlmConfigInput,
 ) -> Result<LlmConfig, IpcError> {
     if !state.ready.load(Ordering::Acquire) {
         return Err(IpcError::app_not_ready());
     }
     input.validate()?;
 
-    let config = LlmConfig {
-        endpoint: input.endpoint.trim().to_string(),
-        api_key: input.api_key.trim().to_string(),
-        model: input.model.trim().to_string(),
+    let normalized_endpoint = input.endpoint.trim().to_string();
+    let normalized_api_key = input.api_key.trim().to_string();
+    let normalized_model = input.model.trim().to_string();
+
+    state
+        .vault
+        .set(DEFAULT_LLM_API_KEY_REF, normalized_api_key.as_str())?;
+
+    let record = LlmConfig {
+        endpoint: normalized_endpoint,
+        api_key_ref: DEFAULT_LLM_API_KEY_REF.to_string(),
+        model: normalized_model,
         temperature: input.temperature,
         max_tokens: input.max_tokens,
         top_p: input.top_p,
@@ -43,11 +64,15 @@ pub async fn set_llm_config(
 
     state
         .app_config_repo
-        .set_llm_config(&config)
+        .set_llm_config(&record)
         .await
         .map_err(IpcError::from)?;
 
-    Ok(config)
+    state
+        .app_config_repo
+        .get_llm_config()
+        .await
+        .map_err(IpcError::from)
 }
 
 /// 用表单中的实时 endpoint + api_key（无需先保存）查询该 endpoint 支持的模型列表。

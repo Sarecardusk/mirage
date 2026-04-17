@@ -78,23 +78,24 @@
 
 ### ResourceCrudCommand
 
-| 命令名                | 方向      | 说明                                          | 状态        | Owner     |
-| --------------------- | --------- | --------------------------------------------- | ----------- | --------- |
-| `get_llm_config`      | UI → Rust | 读取 LLM 配置                                 | Implemented | Rust Core |
-| `set_llm_config`      | UI → Rust | 写入 LLM 配置                                 | Implemented | Rust Core |
-| `list_llm_models`     | UI → Rust | 用 endpoint + apiKey 查询模型列表             | Implemented | Rust Core |
-| `test_llm_connection` | UI → Rust | 用 endpoint + apiKey + model 做最小连通性测试 | Implemented | Rust Core |
-| `list_theme_cards`    | UI → Rust | 列出所有 Theme Card                           | Planned     | Rust Core |
-| `get_theme_card`      | UI → Rust | 按 ID 读取单张卡片                            | Planned     | Rust Core |
-| `delete_theme_card`   | UI → Rust | 删除卡片（含引用清理）                        | Planned     | Rust Core |
-| `list_sessions`       | UI → Rust | 列出指定卡片的 Session                        | Planned     | Rust Core |
-| `delete_session`      | UI → Rust | 删除 Session                                  | Planned     | Rust Core |
+| 命令名                | 方向      | 说明                                               | 状态        | Owner     |
+| --------------------- | --------- | -------------------------------------------------- | ----------- | --------- |
+| `get_llm_config`      | UI → Rust | 读取 LLM 配置                                      | Implemented | Rust Core |
+| `get_llm_api_key`     | UI → Rust | 读取 Vault 中的 LLM API Key 明文（仅运行时）       | Implemented | Rust Core |
+| `set_llm_config`      | UI → Rust | 写入 `SetLlmConfigInput`，并将 `apiKey` 写入 Vault | Implemented | Rust Core |
+| `list_llm_models`     | UI → Rust | 用 endpoint + apiKey 查询模型列表                  | Implemented | Rust Core |
+| `test_llm_connection` | UI → Rust | 用 endpoint + apiKey + model 做最小连通性测试      | Implemented | Rust Core |
+| `list_theme_cards`    | UI → Rust | 列出所有 Theme Card                                | Planned     | Rust Core |
+| `get_theme_card`      | UI → Rust | 按 ID 读取单张卡片                                 | Planned     | Rust Core |
+| `delete_theme_card`   | UI → Rust | 删除卡片（含引用清理）                             | Planned     | Rust Core |
+| `list_sessions`       | UI → Rust | 列出指定卡片的 Session                             | Planned     | Rust Core |
+| `delete_session`      | UI → Rust | 删除 Session                                       | Planned     | Rust Core |
 
 ### 应用配置持久化契约
 
-| 记录             | 关键字段                                                                                                           | 状态        |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------ | ----------- |
-| `app_config:llm` | `endpoint`、`api_key`、`model`、`temperature?`、`max_tokens?`、`top_p?`、`frequency_penalty?`、`presence_penalty?` | Implemented |
+| 记录             | 关键字段                                                                                                               | 状态        |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `app_config:llm` | `endpoint`、`api_key_ref`、`model`、`temperature?`、`max_tokens?`、`top_p?`、`frequency_penalty?`、`presence_penalty?` | Implemented |
 
 ### 流式事件类型（Channel API）
 
@@ -114,30 +115,34 @@
 
 ### 错误码注册表
 
-| error_code               | 类别            | retryable | 说明                         | 状态    |
-| ------------------------ | --------------- | --------- | ---------------------------- | ------- |
-| `APP_NOT_READY`          | `InfraError`    | true      | AppReady 前调用业务命令      | Planned |
-| `ENTITY_NOT_FOUND`       | `DomainError`   | false     | 实体不存在                   | Planned |
-| `VALIDATION_FAILED`      | `DomainError`   | false     | 输入校验失败                 | Planned |
-| `MIGRATION_FAILED`       | `DomainError`   | false     | 迁移执行失败                 | Planned |
-| `VERSION_MISMATCH`       | `DomainError`   | false     | schemaVersion 不匹配         | Planned |
-| `STORAGE_READ_FAILED`    | `InfraError`    | true      | SurrealDB 读取失败           | Planned |
-| `STORAGE_WRITE_FAILED`   | `InfraError`    | true      | SurrealDB 写入失败           | Planned |
-| `ASSET_WRITE_FAILED`     | `InfraError`    | true      | 资产文件写入失败             | Planned |
-| `DANGLING_REFERENCE`     | `InfraError`    | false     | 悬挂引用检测                 | Planned |
-| `COMMAND_TIMEOUT`        | `InfraError`    | true      | 非流式命令超时               | Planned |
-| `CLIENT_DISCONNECTED`    | `InfraError`    | false     | 前端断连                     | Planned |
-| `SHUTDOWN_ABORT`         | `InfraError`    | false     | 应用关闭中断                 | Planned |
-| `UNPAIRED_DEVICE`        | `SecurityError` | false     | 未配对设备                   | Planned |
-| `INVALID_PASSPHRASE`     | `SecurityError` | false     | 口令错误                     | Planned |
-| `SIGNATURE_FAILED`       | `SecurityError` | false     | 签名校验失败                 | Planned |
-| `GATEWAY_TIMEOUT`        | `GatewayError`  | true      | 上游供应商超时               | Planned |
-| `GATEWAY_UPSTREAM_ERROR` | `GatewayError`  | true      | 上游返回可重试错误           | Planned |
-| `GATEWAY_FATAL_ERROR`    | `GatewayError`  | false     | 上游返回不可重试错误         | Planned |
-| `NORMALIZATION_FAILED`   | `GatewayError`  | false     | 响应归一化失败               | Planned |
-| `RETRIEVAL_DEGRADED`     | `GatewayError`  | false     | 检索降级（可继续无检索路径） | Planned |
-| `GENERATION_CANCELLED`   | `DomainError`   | false     | 用户主动取消生成             | Planned |
-| `GENERATION_CONFLICT`    | `DomainError`   | false     | 同 Session 已有活跃生成流    | Planned |
+| error_code               | 类别            | retryable | 说明                          | 状态        |
+| ------------------------ | --------------- | --------- | ----------------------------- | ----------- |
+| `APP_NOT_READY`          | `InfraError`    | true      | AppReady 前调用业务命令       | Planned     |
+| `ENTITY_NOT_FOUND`       | `DomainError`   | false     | 实体不存在                    | Planned     |
+| `VALIDATION_FAILED`      | `DomainError`   | false     | 输入校验失败                  | Planned     |
+| `MIGRATION_FAILED`       | `DomainError`   | false     | 迁移执行失败                  | Planned     |
+| `VERSION_MISMATCH`       | `DomainError`   | false     | schemaVersion 不匹配          | Planned     |
+| `STORAGE_READ_FAILED`    | `InfraError`    | true      | SurrealDB 读取失败            | Planned     |
+| `STORAGE_WRITE_FAILED`   | `InfraError`    | true      | SurrealDB 写入失败            | Planned     |
+| `VAULT_WRITE_FAILED`     | `InfraError`    | true      | Vault 原子落盘失败/随机源失败 | Implemented |
+| `VAULT_CORRUPTED`        | `InfraError`    | false     | Vault 文件格式损坏            | Implemented |
+| `ASSET_WRITE_FAILED`     | `InfraError`    | true      | 资产文件写入失败              | Planned     |
+| `DANGLING_REFERENCE`     | `InfraError`    | false     | 悬挂引用检测                  | Planned     |
+| `COMMAND_TIMEOUT`        | `InfraError`    | true      | 非流式命令超时                | Planned     |
+| `CLIENT_DISCONNECTED`    | `InfraError`    | false     | 前端断连                      | Planned     |
+| `SHUTDOWN_ABORT`         | `InfraError`    | false     | 应用关闭中断                  | Planned     |
+| `UNPAIRED_DEVICE`        | `SecurityError` | false     | 未配对设备                    | Planned     |
+| `INVALID_PASSPHRASE`     | `SecurityError` | false     | 口令错误                      | Planned     |
+| `SIGNATURE_FAILED`       | `SecurityError` | false     | 签名校验失败                  | Planned     |
+| `VAULT_KEY_MISSING`      | `SecurityError` | false     | 有密文无主密钥，硬拒绝启动    | Implemented |
+| `VAULT_DECRYPT_FAILED`   | `SecurityError` | false     | 密文篡改或密钥不匹配，硬拒绝  | Implemented |
+| `GATEWAY_TIMEOUT`        | `GatewayError`  | true      | 上游供应商超时                | Planned     |
+| `GATEWAY_UPSTREAM_ERROR` | `GatewayError`  | true      | 上游返回可重试错误            | Planned     |
+| `GATEWAY_FATAL_ERROR`    | `GatewayError`  | false     | 上游返回不可重试错误          | Planned     |
+| `NORMALIZATION_FAILED`   | `GatewayError`  | false     | 响应归一化失败                | Planned     |
+| `RETRIEVAL_DEGRADED`     | `GatewayError`  | false     | 检索降级（可继续无检索路径）  | Planned     |
+| `GENERATION_CANCELLED`   | `DomainError`   | false     | 用户主动取消生成              | Planned     |
+| `GENERATION_CONFLICT`    | `DomainError`   | false     | 同 Session 已有活跃生成流     | Planned     |
 
 > 新增错误码时必须同步更新此表与 Rust/TS 两侧实现（TD-01）。状态从 `Planned` 变为 `Implemented` 时一并更新。
 

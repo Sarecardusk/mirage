@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getLlmConfig, listLlmModels, setLlmConfig, testLlmConnection } from "@/services/config";
+import {
+  getLlmApiKey,
+  getLlmConfig,
+  listLlmModels,
+  setLlmConfig,
+  testLlmConnection,
+} from "@/services/config";
 
 const invokeMock = vi.fn();
 
@@ -8,6 +14,17 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 const validConfig = {
+  endpoint: "https://api.deepseek.com",
+  apiKeyRef: "llm_api_key",
+  model: "deepseek-chat",
+  temperature: null,
+  maxTokens: null,
+  topP: null,
+  frequencyPenalty: null,
+  presencePenalty: null,
+};
+
+const validSetInput = {
   endpoint: "https://api.deepseek.com",
   apiKey: "sk-test-key",
   model: "deepseek-chat",
@@ -39,11 +56,22 @@ describe("config service", () => {
     });
   });
 
+  describe("getLlmApiKey", () => {
+    it("reads plaintext api key from dedicated command", async () => {
+      invokeMock.mockResolvedValueOnce("sk-test-key");
+
+      const apiKey = await getLlmApiKey();
+
+      expect(invokeMock).toHaveBeenCalledWith("get_llm_api_key");
+      expect(apiKey).toBe("sk-test-key");
+    });
+  });
+
   describe("setLlmConfig", () => {
     it("rejects invalid input before calling invoke", async () => {
       await expect(
         setLlmConfig({
-          ...validConfig,
+          ...validSetInput,
           model: "",
         }),
       ).rejects.toThrow();
@@ -53,9 +81,9 @@ describe("config service", () => {
     it("calls invoke with validated config", async () => {
       invokeMock.mockResolvedValueOnce(validConfig);
 
-      const config = await setLlmConfig(validConfig);
+      const config = await setLlmConfig(validSetInput);
 
-      expect(invokeMock).toHaveBeenCalledWith("set_llm_config", { input: validConfig });
+      expect(invokeMock).toHaveBeenCalledWith("set_llm_config", { input: validSetInput });
       expect(config.endpoint).toBe("https://api.deepseek.com");
     });
   });

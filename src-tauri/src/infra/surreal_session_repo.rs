@@ -272,14 +272,25 @@ fn json_to_message(val: serde_json::Value) -> Result<Message, DomainError> {
 mod tests {
     use std::sync::Arc;
 
+    use uuid::Uuid;
+
     use crate::domain::session::{ChatRole, SessionRepository};
     use crate::infra::database::Database;
     use crate::infra::migration;
     use crate::infra::surreal_session_repo::SurrealSessionRepo;
+    use crate::infra::vault::{MachineLocalKeyProvider, Vault};
+
+    fn make_vault() -> Arc<Vault> {
+        let vault_dir =
+            std::env::temp_dir().join(format!("mirage-vault-session-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&vault_dir).unwrap();
+        Arc::new(Vault::open(&vault_dir, &MachineLocalKeyProvider).unwrap())
+    }
 
     async fn make_repo() -> SurrealSessionRepo {
         let db = Arc::new(Database::connect_memory().await.unwrap());
-        migration::run(&db).await.unwrap();
+        let vault = make_vault();
+        migration::run(&db, &vault).await.unwrap();
         SurrealSessionRepo::new(db)
     }
 

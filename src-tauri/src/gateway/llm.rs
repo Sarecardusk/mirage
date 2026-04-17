@@ -88,6 +88,7 @@ pub async fn test_connection(input: &TestLlmConnectionInput) -> Result<()> {
 
 pub async fn stream_chat_completion(
     config: &LlmConfig,
+    api_key: &str,
     theme_card_name: &str,
     system_prompt: &str,
     history: &[Message],
@@ -130,7 +131,7 @@ pub async fn stream_chat_completion(
     let client = reqwest::Client::new();
     let response = client
         .post(completion_url(config.endpoint.as_str()))
-        .bearer_auth(config.api_key.as_str())
+        .bearer_auth(api_key)
         .json(&body)
         .send()
         .await

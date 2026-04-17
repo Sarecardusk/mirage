@@ -3,17 +3,27 @@ import { z } from "zod";
 import {
   ListLlmModelsInputSchema,
   LlmConfigSchema,
+  SetLlmConfigInputSchema,
   TestLlmConnectionInputSchema,
 } from "@/schemas/config";
-import type { ListLlmModelsInput, LlmConfig, TestLlmConnectionInput } from "@/types/bindings";
+import type {
+  ListLlmModelsInput,
+  LlmConfig,
+  SetLlmConfigInput,
+  TestLlmConnectionInput,
+} from "@/types/bindings";
 
 export async function getLlmConfig(): Promise<LlmConfig> {
   const response = await invoke("get_llm_config");
   return LlmConfigSchema.parse(response);
 }
 
-export async function setLlmConfig(input: LlmConfig): Promise<LlmConfig> {
-  const validatedInput = LlmConfigSchema.parse(input);
+export async function getLlmApiKey(): Promise<string> {
+  return z.string().parse(await invoke("get_llm_api_key"));
+}
+
+export async function setLlmConfig(input: SetLlmConfigInput): Promise<LlmConfig> {
+  const validatedInput = SetLlmConfigInputSchema.parse(input);
   const response = await invoke("set_llm_config", { input: validatedInput });
   return LlmConfigSchema.parse(response);
 }

@@ -200,6 +200,8 @@ fn json_to_theme_card(val: serde_json::Value) -> Result<ThemeCard, DomainError> 
 mod tests {
     use std::sync::Arc;
 
+    use uuid::Uuid;
+
     use crate::domain::error::DomainError;
     use crate::domain::session::SessionRepository;
     use crate::domain::theme_card::{
@@ -209,17 +211,27 @@ mod tests {
     use crate::infra::migration;
     use crate::infra::surreal_session_repo::SurrealSessionRepo;
     use crate::infra::surreal_theme_card_repo::SurrealThemeCardRepo;
+    use crate::infra::vault::{MachineLocalKeyProvider, Vault};
+
+    fn make_vault() -> Arc<Vault> {
+        let vault_dir =
+            std::env::temp_dir().join(format!("mirage-vault-theme-card-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&vault_dir).unwrap();
+        Arc::new(Vault::open(&vault_dir, &MachineLocalKeyProvider).unwrap())
+    }
 
     async fn make_repo() -> SurrealThemeCardRepo {
         let db = Arc::new(Database::connect_memory().await.unwrap());
-        migration::run(&db).await.unwrap();
+        let vault = make_vault();
+        migration::run(&db, &vault).await.unwrap();
         SurrealThemeCardRepo::new(db)
     }
 
     // 同时返回 theme card repo 和 session repo（共享同一个 db），用于级联删除测试
     async fn make_repos() -> (SurrealThemeCardRepo, SurrealSessionRepo) {
         let db = Arc::new(Database::connect_memory().await.unwrap());
-        migration::run(&db).await.unwrap();
+        let vault = make_vault();
+        migration::run(&db, &vault).await.unwrap();
         let tc_repo = SurrealThemeCardRepo::new(Arc::clone(&db));
         let s_repo = SurrealSessionRepo::new(Arc::clone(&db));
         (tc_repo, s_repo)

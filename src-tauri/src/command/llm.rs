@@ -67,7 +67,16 @@ pub async fn invoke_llm_generation(
         .await
         .map_err(IpcError::from)?;
 
-    if config.api_key.trim().is_empty() {
+    let api_key = state
+        .vault
+        .get(config.api_key_ref.as_str())
+        .ok_or_else(|| {
+            IpcError::from(DomainError::ValidationFailed {
+                field: "apiKey".to_string(),
+            })
+        })?;
+
+    if api_key.trim().is_empty() {
         return Err(IpcError::from(DomainError::ValidationFailed {
             field: "apiKey".to_string(),
         }));
@@ -81,6 +90,7 @@ pub async fn invoke_llm_generation(
 
     match gateway::llm::stream_chat_completion(
         &config,
+        api_key.as_str(),
         theme_card.name.as_str(),
         theme_card.system_prompt.as_str(),
         &history,

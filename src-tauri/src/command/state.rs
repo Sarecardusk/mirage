@@ -5,6 +5,7 @@ use crate::infra::app_config_repo::AppConfigRepo;
 use crate::infra::database::Database;
 use crate::infra::surreal_session_repo::SurrealSessionRepo;
 use crate::infra::surreal_theme_card_repo::SurrealThemeCardRepo;
+use crate::infra::vault::Vault;
 
 /// 通过 `tauri::Manager::manage` 注入的全局共享状态。
 ///
@@ -19,16 +20,18 @@ pub struct AppState {
     pub theme_card_repo: SurrealThemeCardRepo,
     pub session_repo: SurrealSessionRepo,
     pub app_config_repo: AppConfigRepo,
+    pub vault: Arc<Vault>,
 }
 
 impl AppState {
     /// 基于已经连通且完成迁移的 `Database` 构造应用状态。
-    pub fn new(db: Arc<Database>) -> Self {
+    pub fn new(db: Arc<Database>, vault: Arc<Vault>) -> Self {
         Self {
             ready: AtomicBool::new(false),
             theme_card_repo: SurrealThemeCardRepo::new(Arc::clone(&db)),
             session_repo: SurrealSessionRepo::new(Arc::clone(&db)),
             app_config_repo: AppConfigRepo::new(Arc::clone(&db)),
+            vault,
         }
     }
 }

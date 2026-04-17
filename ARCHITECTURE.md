@@ -1,6 +1,6 @@
 # Mirage Architecture
 
-> Last Updated: 2026-04-05
+> Last Updated: 2026-04-17
 
 本文件是 Mirage 的 Code Map。
 目标是帮助贡献者快速回答两个问题：
@@ -44,18 +44,19 @@ flowchart LR
 
 ### Backend (`src-tauri/src/`)
 
-| 技术                             | 角色                             |
-| -------------------------------- | -------------------------------- |
-| Tauri 2                          | 应用外壳与跨平台能力             |
-| SurrealDB 3.x 嵌入式 (SurrealKV) | 数据库                           |
-| tokio (full)                     | 异步运行时                       |
-| tracing + tracing-subscriber     | 结构化日志与可观测性             |
-| reqwest                          | HTTP 客户端（LLM API 调用）      |
-| anyhow + thiserror               | 错误处理                         |
-| ring + argon2                    | 加密（Vault 密钥派生与数据加密） |
-| validator                        | 输入校验                         |
-| Specta                           | TypeScript 类型导出              |
-| serde + serde_json               | 序列化                           |
+| 技术                             | 角色                           |
+| -------------------------------- | ------------------------------ |
+| Tauri 2                          | 应用外壳与跨平台能力           |
+| SurrealDB 3.x 嵌入式 (SurrealKV) | 数据库                         |
+| tokio (full)                     | 异步运行时                     |
+| tracing + tracing-subscriber     | 结构化日志与可观测性           |
+| reqwest                          | HTTP 客户端（LLM API 调用）    |
+| anyhow + thiserror               | 错误处理                       |
+| ring                             | 加密（Vault 数据加密，MVP）    |
+| argon2（待引入）                 | 用户口令派生主密钥（后续特性） |
+| validator                        | 输入校验                       |
+| Specta                           | TypeScript 类型导出            |
+| serde + serde_json               | 序列化                         |
 
 ## Code Map
 
@@ -95,7 +96,7 @@ src-tauri/src/
   main.rs              -- 桌面入口，转发到 mirage_lib::run()
   lib.rs               -- Tauri Builder、命令注册、插件装配
   domain/              -- 核心业务：实体、值对象、领域服务、Repository trait 定义
-  infra/               -- 基础设施：SurrealDB 适配器、文件系统、Vault 存储（ring + argon2）
+  infra/               -- 基础设施：SurrealDB 适配器、文件系统、Vault 存储（ring）
   gateway/             -- 外部适配：LLM HTTP 调用（reqwest）、响应归一化
   command/             -- Tauri command 处理层：反序列化、编排、序列化
 ```
@@ -160,7 +161,7 @@ src-tauri/src/
 ### `infra/` 层
 
 - SurrealDB 嵌入式存储适配（SurrealKV 模式）。
-- Vault 加密存储（ring + argon2）。
+- Vault 加密存储（MVP 使用 ring；argon2 待口令派生特性落地后引入）。
 
 ### `command/` 层
 

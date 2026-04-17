@@ -1,6 +1,6 @@
 # Mirage 协作指南
 
-> Last Updated: 2026-04-15
+> Last Updated: 2026-04-17
 
 此文件只做轻量导航与协作约定。
 产品与系统细节请在对应文档中维护。
@@ -54,7 +54,7 @@ docs/
 
 ## 当前实现状态
 
-项目已完成 MVP 最简会话循环与 SurrealDB 持久化集成，具备端到端可用的基础功能。
+项目已完成 MVP 最简会话循环、SurrealDB 持久化与 Vault 密钥存储集成，具备端到端可用的基础功能。
 
 文档中的约束分两类：
 
@@ -66,9 +66,9 @@ docs/
 **后端四层**（`src-tauri/src/`）：
 
 - `domain/`：ThemeCard、Session、LLM 实体与 Repository trait。
-- `infra/`：SurrealDB 持久化实现（ThemeCard / Session / AppConfig）、数据库初始化与迁移。
+- `infra/`：SurrealDB 持久化实现（ThemeCard / Session / AppConfig）、Vault 存储、数据库初始化与迁移。
 - `gateway/`：LLM HTTP 流式网关（reqwest + SSE）。
-- `command/`：9 个 IPC 命令（ThemeCard CRUD × 3、Session × 3、Config × 2、LLM × 1）。
+- `command/`：16 个 IPC 命令（ThemeCard × 5、Session × 5、Config × 5、LLM × 1）。
 
 **前端**（`src/`）：
 
@@ -87,7 +87,7 @@ docs/
 **尚未安装的预批准依赖**：
 
 - 前端：`@tauri-store/pinia`。
-- 后端：`ring`、`argon2`、`validator`（安全与校验相关，按需引入）。
+- 后端：`argon2`、`validator`（安全与校验相关，按需引入）。
 
 ## 预批准依赖
 

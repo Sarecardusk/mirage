@@ -5,7 +5,8 @@ import { invoke as __TAURI_INVOKE, Channel } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	getLlmConfig: () => typedError<LlmConfig, IpcError>(__TAURI_INVOKE("get_llm_config")),
-	setLlmConfig: (input: LlmConfig) => typedError<LlmConfig, IpcError>(__TAURI_INVOKE("set_llm_config", { input })),
+	getLlmApiKey: () => typedError<string, IpcError>(__TAURI_INVOKE("get_llm_api_key")),
+	setLlmConfig: (input: SetLlmConfigInput) => typedError<LlmConfig, IpcError>(__TAURI_INVOKE("set_llm_config", { input })),
 	// 用表单中的实时 endpoint + api_key（无需先保存）查询该 endpoint 支持的模型列表。
 	listLlmModels: (input: ListLlmModelsInput) => typedError<string[], IpcError>(__TAURI_INVOKE("list_llm_models", { input })),
 	// 用表单中的实时配置发一次最小请求（max_tokens=1）验证连通性。
@@ -58,7 +59,7 @@ export type ListLlmModelsInput = {
 
 export type LlmConfig = {
 	endpoint: string,
-	apiKey: string,
+	apiKeyRef: string,
 	model: string,
 	temperature: number | null,
 	maxTokens: number | null,
@@ -86,6 +87,17 @@ export type Session = {
 	 *  用于在打开 Theme Card 时自动跳转到最近打开的 Session。
 	 */
 	lastOpenedAt: string | null,
+};
+
+export type SetLlmConfigInput = {
+	endpoint: string,
+	apiKey: string,
+	model: string,
+	temperature: number | null,
+	maxTokens: number | null,
+	topP: number | null,
+	frequencyPenalty: number | null,
+	presencePenalty: number | null,
 };
 
 export type TestLlmConnectionInput = {
